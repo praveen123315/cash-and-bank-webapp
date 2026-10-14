@@ -295,6 +295,9 @@ h2.inline { margin: 0 0 4px; }
 #advTable input.adv-amt.err { border-color: var(--red); background: var(--red-bg); }
 #advTable tr.picked td { background: #f3f8f1; }
 #advTable tr.dept-row td { background: #eef3fa; color: var(--primary); font-weight: 700; }
+.hist-actions { float: right; display: inline-flex; gap: 6px; }
+.inp-adv { font-size: 15px; }
+.inp-adv .sub { font-size: 11px; }
 .adv-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 12px; }
 
 /* ============ Surface Paints branding ============ */
@@ -314,6 +317,8 @@ h2.inline { margin: 0 0 4px; }
 </style>
   <!-- Excel reader/writer (machine .xls, wages .xlsx, exports) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 
@@ -415,6 +420,7 @@ h2.inline { margin: 0 0 4px; }
             <option value="Cash">All cash</option>
           </select>
         </div>
+        <p id="inpAdvNote" class="note"></p>
         <div class="table-wrap tall"><table id="inputsTable" class="grid inputs"></table></div>
       </section>
 
@@ -462,9 +468,24 @@ h2.inline { margin: 0 0 4px; }
           <div class="table-wrap tall"><table id="advTable" class="grid"></table></div>
           <div class="adv-foot">
             <b id="advSummary"></b>
-            <button id="advSaveBtn" class="btn primary">Save advances</button>
+            <div class="toolbar-actions">
+              <button id="advPdfBtn" class="btn" disabled title="Saved advances of this month and sheet">Download PDF</button>
+              <button id="advWordBtn" class="btn" disabled title="Saved advances of this month and sheet">Download Word</button>
+              <button id="advSaveBtn" class="btn primary">Save advances</button>
+            </div>
           </div>
         </div>
+
+        <h2 style="margin-top:28px">Advance history</h2>
+        <p class="muted small">Every saved advance, by month. An advance saved for a month (for example on 22 October for
+          October 2026) is deducted when that month's attendance is processed, and shows in Monthly Inputs and Payroll.</p>
+        <div class="filters">
+          <select id="histMonth"><option value="">All months</option></select>
+          <select id="histType"><option value="">Bank and Cash</option><option value="Bank">Bank Advance Sheet</option><option value="Cash">Cash Advance Sheet</option></select>
+          <input type="search" id="histSearch" placeholder="Search code, name or department">
+          <span id="histCount" class="muted small"></span>
+        </div>
+        <div class="table-wrap tall"><table id="histTable" class="grid"></table></div>
       </section>
 
       <!-- Filters for Payroll + Cash Sheet -->
@@ -621,6 +642,10 @@ document.addEventListener('DOMContentLoaded', () => {
   $('advTable').addEventListener('input', onAdvTableInput);
   $('advTable').addEventListener('change', onAdvTableInput);
   $('advSaveBtn').addEventListener('click', onAdvSave);
+  $('advPdfBtn').addEventListener('click', () => onAdvDownload('pdf'));
+  $('advWordBtn').addEventListener('click', () => onAdvDownload('word'));
+  ['histMonth', 'histType', 'histSearch'].forEach(id => $(id).addEventListener('input', renderAdvHistory));
+  $('histTable').addEventListener('click', onHistClick);
 
   ['searchInput', 'deptFilter', 'statusFilter'].forEach(id =>
     $(id).addEventListener('input', () => { renderPayroll(); renderCash(); }));
@@ -734,6 +759,7 @@ async function onRecalculate() {
 }
 
 function applyData(res) {
+  state.advances = res.advances || [];
   state.rows = res.rows || [];
   state.unmatched = res.unmatched || [];
   state.missing = res.missing || [];
@@ -759,7 +785,11 @@ function showTab(tab) {
   $('filterBar').hidden = !(tab === 'payroll' || tab === 'cash');
   if (tab === 'inputs' && !state.inputs && state.token) run('Loading inputs…', loadInputs);
   if (tab === 'master' && state.token) run('Loading Master…', loadMaster);
-  if (tab === 'advance') { if (!$('advMonth').value) { $('advMonthErr').hidden = false; } onAdvChoice(); }
+  if (tab === 'advance') {
+    if (!$('advMonth').value) { $('advMonthErr').hidden = false; }
+    onAdvChoice();
+    if (state.token) loadAdvHistory().catch(err => toast(err.message, true));
+  }
 }
 
 /* ================= NOTICES ================= */
@@ -809,6 +839,8 @@ function renderDashboard() {
     { label: 'Bank (Form 12 + staff)', value: rs(r.reduce((s, x) => s + Math.max(x.bank, 0), 0)) },
     { label: 'Employees in payroll', value: r.length },
     { label: 'With PF', value: r.filter(x => x.pf > 0).length },
+    { label: `Advances given in ${monthLabel(state.month)}`, value: rs(sum(state.advances || [], 'bank') + sum(state.advances || [], 'cash')),
+      sub: `${(state.advances || []).length} employees · Bank ${rs(sum(state.advances || [], 'bank'))} · Cash ${rs(sum(state.advances || [], 'cash'))}` },
     { label: 'With advance', value: r.filter(x => x.advMonth > 0 || x.advIn > 0).length },
     { label: 'Carried forward', value: r.filter(x => x.carry > 0).length, cls: r.some(x => x.carry > 0) ? 'bad' : '' },
     { label: 'Unmatched', value: state.unmatched.length, cls: state.unmatched.length ? 'bad' : '' },
@@ -906,6 +938,15 @@ async function onPayrollClick(e) {
   } catch (err) { toast(err.message, true); btn.disabled = false; }
 }
 
+function advLine(r, kind) {
+  const amt = kind === 'bank' ? r.advBank : r.advCash;
+  if (!amt) return '';
+  const a = (state.advances || []).find(x => x.code === String(r.code).toUpperCase()) || {};
+  const on = kind === 'bank' ? a.bankOn : a.cashOn;
+  return `<tr class="minus"><td>${kind === 'bank' ? 'Bank' : 'Cash'} advance — ${monthLabel(state.month)}
+    <span class="formula">saved on the Advance page${on ? ' on ' + esc(on) : ''}</span></td><td>${rs(amt)}</td></tr>`;
+}
+
 function showDetail(code) {
   const r = state.rows.find(x => x.code === code);
   if (!r) return;
@@ -930,7 +971,7 @@ function showDetail(code) {
       ${line('Gross salary', rs(r.gross), 'sum')}
       ${minus('Extra deduction', r.extra)}${minus('TDS', r.tds)}
       ${minus('Late deduction', r.late)}
-      ${minus('Loan', r.loan)}${minus('NATS', r.nats)}${minus('Bank advance', r.advBank)}${minus('Cash advance', r.advCash)}
+      ${minus('Loan', r.loan)}${minus('NATS', r.nats)}${advLine(r, 'bank')}${advLine(r, 'cash')}
       ${minus('Advance carried from last month', r.advIn)}
       ${r.esic ? line('ESIC', rs(r.esic), 'minus', `0.75% of salary ${rs(r.salary)}`) : ''}
       ${r.pf ? line('PF', rs(r.pf), 'minus', `12% of Form 12 earned ${rs(f12Earned)}`) : ''}
@@ -1259,7 +1300,13 @@ function renderInputs() {
   $('inpDesig').options[0].textContent = 'All designations';
   updateDirty();
   if (!list.length) { $('inputsTable').innerHTML = '<tr><td class="muted">No employees in Master yet.</td></tr>'; return; }
-  const ncols = INPUT_COLS.length + 5;
+  const ncols = INPUT_COLS.length + 6;
+  const advs = list.filter(e => e.advance);
+  const aBank = advs.reduce((t, e) => t + e.advance.bank, 0), aCash = advs.reduce((t, e) => t + e.advance.cash, 0);
+  $('inpAdvNote').innerHTML = advs.length
+    ? `<b>Advances given for ${monthLabel(state.month)}:</b> ${advs.length} employees · ${rs(aBank + aCash)}
+       (Bank ${rs(aBank)} · Cash ${rs(aCash)}). They are deducted in this month's payroll. Change them on the <b>Advance</b> page.`
+    : '';
   const head = INPUT_COLS.map(c => `<th class="num ${c.group ? 'grp-start' : ''}">${c.label}</th>`).join('');
   const counts = {};
   list.forEach(e => { counts[e.dept] = (counts[e.dept] || 0) + 1; });
@@ -1284,10 +1331,13 @@ function renderInputs() {
       data-desig="${esc((e.designation || '').toUpperCase())}" data-search="${esc((e.code + ' ' + e.name).toLowerCase())}">
       <td>${esc(e.code)}</td><td>${esc(e.name)}<span class="sub">${type}${e.designation ? ' · ' + esc(e.designation) : ''}${flag}</span></td>
       <td class="num">${e.payable}</td><td class="ro">${e.machine ? e.machine.absent : '—'}</td>
-      <td class="ro">${e.machine ? e.machine.lateMarks : '—'}</td>${cells}</tr>`;
+      <td class="ro">${e.machine ? e.machine.lateMarks : '—'}</td>
+      <td class="ro inp-adv">${e.advance ? `<b>${rs(e.advance.bank + e.advance.cash)}</b><span class="sub">${
+        [e.advance.bank ? 'Bank ' + esc(e.advance.bankOn) : '', e.advance.cash ? 'Cash ' + esc(e.advance.cashOn) : ''].filter(Boolean).join(' · ')}</span>` : '—'}</td>${cells}</tr>`;
   }).join('');
   $('inputsTable').innerHTML = `<thead><tr><th>Code</th><th>Name</th><th class="num">Days</th><th class="num" title="Absent days in the machine file">Absent</th>
-    <th class="num" title="Late marks in the machine file (for information — no automatic cut)">Late marks</th>${head}</tr></thead><tbody>${body}</tbody>`;
+    <th class="num" title="Late marks in the machine file (for information — no automatic cut)">Late marks</th>
+    <th class="num" title="Advances saved on the Advance page for this month">Advance ₹</th>${head}</tr></thead><tbody>${body}</tbody>`;
   filterInputs();
 }
 
@@ -1499,8 +1549,9 @@ async function onAdvChoice() {
   await run('Loading advances…', async () => {
     if (!state.master) state.master = (await api('getMaster')).employees;
     const res = await api('getAdvances', { month, sheetType: type });
-    state.adv = { month, type, saved: {} };
-    res.rows.forEach(r => { state.adv.saved[r.code] = r.amount; });
+    state.adv = { month, type, saved: {}, on: {} };
+    state.advDirty = false;
+    res.rows.forEach(r => { state.adv.saved[r.code] = r.amount; state.adv.on[r.code] = r.savedOn; });
     $('advTitle').textContent = `${type} Advance Sheet — ${monthLabel(month)}`;
     renderAdvance();
   });
@@ -1527,6 +1578,7 @@ function renderAdvance() {
     }).join('')}</tbody>`;
   filterAdvance();
   advTotals();
+  updateAdvDownload();
 }
 function filterAdvance() {
   const q = $('advSearch').value.trim().toLowerCase(), onlySel = $('advOnlySel').checked;
@@ -1579,13 +1631,168 @@ async function onAdvSave() {
     (removed.length ? `\n${removed.length} earlier entr${removed.length === 1 ? 'y' : 'ies'} will be removed.` : ''))) return;
   await run('Saving advances…', async () => {
     const res = await api('saveAdvances', { month, sheetType: type, rows });
-    state.adv.saved = {};
-    res.rows.forEach(r => { state.adv.saved[r.code] = r.amount; });
+    state.adv.saved = {}; state.adv.on = {};
+    res.rows.forEach(r => { state.adv.saved[r.code] = r.amount; state.adv.on[r.code] = r.savedOn; });
     state.advDirty = false;
     renderAdvance();
+    loadAdvHistory().catch(() => {});
     if (month === state.month) applyData(await api('getMonth', { month: state.month }));
-    toast(`Saved: ${res.rows.length} employees · ${rs(res.total)}`);
+    toast(`Saved: ${res.rows.length} employees · ${rs(res.total)}. You can now download the PDF.`);
   });
+}
+
+/* ================= ADVANCE: DOWNLOAD (PDF / Word) + HISTORY ================= */
+/** entries = [{code, name, dept, designation, amount, savedOn}] → grouped by department */
+function advGroups(entries) {
+  const byCode = {};
+  (state.master || []).forEach(e => { byCode[e.code] = e; });
+  const list = entries.map(x => {
+    const m = byCode[x.code] || {};
+    return { code: x.code, name: x.name || m.name || '', dept: x.dept || m.dept || '', designation: x.designation || m.designation || '',
+             amount: Math.round(Number(x.amount) || 0), savedOn: x.savedOn || '' };
+  }).sort((a, b) => a.dept.localeCompare(b.dept) || a.code.localeCompare(b.code, undefined, { numeric: true }));
+  const groups = [];
+  list.forEach(x => { let g = groups.find(d => d.name === x.dept); if (!g) groups.push(g = { name: x.dept, rows: [] }); g.rows.push(x); });
+  return { groups, total: list.reduce((s, x) => s + x.amount, 0), count: list.length };
+}
+const inr = n => Math.round(n).toLocaleString('en-IN');
+
+function downloadAdvance(kind, month, type, entries) {
+  if (!entries.length) return toast('No saved advances to download for this month and sheet.', true);
+  const { groups, total, count } = advGroups(entries);
+  const title = `${type} Advance Sheet — ${monthLabel(month)}`;
+  const fileBase = `${type}_Advance_${month}`;
+  const printed = new Date().toLocaleString('en-IN');
+  if (kind === 'pdf' && window.jspdf && window.jspdf.jsPDF) {
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    try { doc.addImage(LOGO, 'PNG', 14, 10, 34, 17); } catch (e) { /* logo optional */ }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.text(COMPANY_NAME, W - 14, 16, { align: 'right' });
+    doc.setFontSize(12); doc.text(title.replace('—', '-'), W - 14, 23, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.text(`${count} employees  |  Total Rs. ${inr(total)}  |  Printed ${printed}`, W - 14, 29, { align: 'right' });
+    let y = 36;
+    groups.forEach(g => {
+      const sub = g.rows.reduce((s, x) => s + x.amount, 0);
+      doc.autoTable({
+        startY: y, margin: { left: 14, right: 14 },
+        head: [[{ content: `${g.name}  -  ${g.rows.length} employee${g.rows.length === 1 ? '' : 's'}`, colSpan: 6, styles: { fillColor: [63, 64, 149], textColor: 255, halign: 'left' } }],
+               ['S.No', 'Emp Code', 'Name', 'Designation', 'Advance (Rs.)', 'Signature']],
+        body: g.rows.map((x, i) => [i + 1, x.code, x.name, x.designation, inr(x.amount), '']),
+        foot: [[{ content: 'Department total', colSpan: 4, styles: { halign: 'right' } }, { content: inr(sub), styles: { halign: 'right' } }, '']],
+        theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 2.2, minCellHeight: 8, valign: 'middle', lineColor: [120, 120, 120], lineWidth: 0.1 },
+        headStyles: { fillColor: [230, 234, 242], textColor: 20, fontStyle: 'bold' },
+        footStyles: { fillColor: [245, 246, 250], textColor: 20, fontStyle: 'bold' },
+        columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 22 }, 3: { cellWidth: 34 }, 4: { cellWidth: 26, halign: 'right' }, 5: { cellWidth: 34 } }
+      });
+      y = doc.lastAutoTable.finalY + 6;
+    });
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    doc.text(`Grand total: Rs. ${inr(total)}  (${count} employee${count === 1 ? '' : 's'})`, 14, y + 4);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    const sy = y + 30;
+    [['Prepared by', 14], ['Checked by (HR)', W / 2 - 25], ['Approved by', W - 64]].forEach(([t, x]) => {
+      doc.line(x, sy, x + 50, sy); doc.text(t, x + 25, sy + 5, { align: 'center' });
+    });
+    const pages = doc.getNumberOfPages();
+    for (let p = 1; p <= pages; p++) { doc.setPage(p); doc.setFontSize(8); doc.text(`Page ${p} of ${pages}`, W - 14, 290, { align: 'right' }); }
+    doc.save(fileBase + '.pdf');
+    toast('PDF downloaded');
+    return;
+  }
+  // Word file, or PDF through the print window if the PDF library could not load
+  const css = `body{font-family:Arial,sans-serif;font-size:11pt}h1{font-size:16pt;margin:0}h2{font-size:13pt;margin:4pt 0}
+    table{width:100%;border-collapse:collapse;margin:6pt 0 12pt}th,td{border:1px solid #555;padding:5pt;font-size:10pt;text-align:left}
+    th{background:#e6eaf2}td.n{text-align:right}tr.dh td{background:#3F4095;color:#fff;font-weight:bold}tfoot td{font-weight:bold}
+    @page{size:A4 portrait;margin:12mm}`;
+  const body = `<h1>${esc(COMPANY_NAME)}</h1><h2>${esc(title)}</h2>
+    <p>${count} employees · Total ₹${inr(total)} · Printed ${esc(printed)}</p>
+    ${groups.map(g => `<table><thead><tr class="dh"><td colspan="6">${esc(g.name)} · ${g.rows.length} employees</td></tr>
+      <tr><th>S.No</th><th>Emp Code</th><th>Name</th><th>Designation</th><th>Advance ₹</th><th style="width:22%">Signature</th></tr></thead>
+      <tbody>${g.rows.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.designation)}</td>
+        <td class="n">${inr(x.amount)}</td><td></td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="4" style="text-align:right">Department total</td><td class="n">${inr(g.rows.reduce((s, x) => s + x.amount, 0))}</td><td></td></tr></tfoot></table>`).join('')}
+    <p><b>Grand total: ₹${inr(total)}</b></p>
+    <table style="margin-top:40pt;border:0"><tr><td style="border:0;border-top:1px solid #000;text-align:center">Prepared by</td><td style="border:0"></td>
+      <td style="border:0;border-top:1px solid #000;text-align:center">Checked by (HR)</td><td style="border:0"></td>
+      <td style="border:0;border-top:1px solid #000;text-align:center">Approved by</td></tr></table>`;
+  if (kind === 'word') {
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="utf-8"><title>${esc(title)}</title><style>${css}</style></head><body>${body}</body></html>`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿', html], { type: 'application/msword' }));
+    a.download = fileBase + '.doc';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Word file downloaded');
+    return;
+  }
+  toast('PDF library not loaded — use “Save as PDF” in the print window.');
+  const old = document.getElementById('advFrame'); if (old) old.remove();
+  const frame = document.createElement('iframe');
+  frame.id = 'advFrame'; frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(frame);
+  const d = frame.contentWindow.document;
+  d.open(); d.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(fileBase)}</title><style>${css}</style></head><body>${body}</body></html>`); d.close();
+  setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); }, 400);
+}
+
+/** Download the saved advances of the month + sheet open in the editor. */
+function onAdvDownload(kind) {
+  if (!state.adv) return;
+  if (state.advDirty && !confirm('You have changes that are not saved. The download shows only SAVED advances. Continue?')) return;
+  const entries = Object.keys(state.adv.saved).map(code => ({ code, amount: state.adv.saved[code], savedOn: (state.adv.on || {})[code] }));
+  downloadAdvance(kind, state.adv.month, state.adv.type, entries);
+}
+function updateAdvDownload() {
+  const n = state.adv ? Object.keys(state.adv.saved).length : 0;
+  ['advPdfBtn', 'advWordBtn'].forEach(id => { $(id).disabled = !n; });
+}
+
+async function loadAdvHistory() {
+  const res = await api('advanceHistory');
+  state.advHistory = res.rows;
+  const months = [...new Set(res.rows.map(r => r.month))];
+  const sel = $('histMonth'), cur = sel.value;
+  sel.innerHTML = '<option value="">All months</option>' + months.map(m => `<option value="${m}">${monthLabel(m)}</option>`).join('');
+  if (months.includes(cur)) sel.value = cur;
+  renderAdvHistory();
+}
+function renderAdvHistory() {
+  const all = state.advHistory || [];
+  const m = $('histMonth').value, t = $('histType').value, q = $('histSearch').value.trim().toLowerCase();
+  const rows = all.filter(r => (!m || r.month === m) && (!t || r.type === t) &&
+    (!q || (r.code + ' ' + r.name + ' ' + r.dept).toLowerCase().includes(q)));
+  const total = rows.reduce((s, r) => s + r.amount, 0);
+  $('histCount').textContent = `${rows.length} entries · ${rs(total)}`;
+  if (!rows.length) { $('histTable').innerHTML = '<tr><td class="muted">No advances saved yet.</td></tr>'; return; }
+  const groups = [];
+  rows.forEach(r => { const k = r.month + '|' + r.type; let g = groups.find(x => x.k === k); if (!g) groups.push(g = { k, month: r.month, type: r.type, rows: [] }); g.rows.push(r); });
+  $('histTable').innerHTML = `<thead><tr><th>Emp Code</th><th>Name</th><th>Department</th><th class="num">Amount</th><th>Saved on</th></tr></thead>
+    <tbody>${groups.map(g => `<tr class="dept-row"><td colspan="5">
+        <b>${monthLabel(g.month)} · ${esc(g.type)} Advance Sheet</b> · ${g.rows.length} employees · ${rs(g.rows.reduce((s, r) => s + r.amount, 0))}
+        <span class="hist-actions"><button class="btn small" data-hopen="${g.k}">Open</button>
+        <button class="btn small" data-hpdf="${g.k}">PDF</button><button class="btn small" data-hword="${g.k}">Word</button></span></td></tr>
+      ${g.rows.map(r => `<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.dept)}</td><td class="num">${rs(r.amount)}</td>
+        <td class="muted">${esc(r.savedOn)}</td></tr>`).join('')}`).join('')}</tbody>`;
+}
+function onHistClick(e) {
+  const b = e.target.closest('button[data-hopen],button[data-hpdf],button[data-hword]');
+  if (!b) return;
+  const k = b.dataset.hopen || b.dataset.hpdf || b.dataset.hword;
+  const [month, type] = k.split('|');
+  if (b.dataset.hopen) {
+    if (state.advDirty && !confirm('Unsaved advance changes will be lost. Continue?')) return;
+    $('advMonth').value = month;
+    document.querySelector(`input[name="advType"][value="${type}"]`).checked = true;
+    onAdvChoice();
+    $('advMonth').scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  const entries = (state.advHistory || []).filter(r => r.month === month && r.type === type);
+  downloadAdvance(b.dataset.hpdf ? 'pdf' : 'word', month, type, entries);
 }
 
 /* ================= FILE READING ================= */
