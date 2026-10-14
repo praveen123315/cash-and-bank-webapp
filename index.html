@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<!-- Cash Payroll · Surface Paints Private Limited · single-file app (served by Code.gs) -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cash Payroll · Surface Paints</title>
+  <style>
+/* ============ Cash Payroll — style.css ============ */
+:root {
+  --bg: #f4f6f9;
+  --card: #ffffff;
+  --text: #1d2733;
+  --muted: #667085;
+  --line: #e3e7ed;
+  --primary: #1f3a5f;
+  --primary-2: #2c5282;
+  --green: #18794e;
+  --green-bg: #e7f6ee;
+  --red: #c62828;
+  --red-bg: #fdecec;
+  --amber: #8a5a00;
+  --amber-bg: #fff6e0;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--text);
+}
+h1, h2 { margin: 0 0 10px; }
+h2 { font-size: 17px; margin-top: 22px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.neg { color: var(--red); font-weight: 600; }
+.error-text { color: var(--red); min-height: 20px; margin: 10px 0 0; font-size: 14px; }
+
+/* ---------- Buttons & inputs ---------- */
+.btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { border-color: #c4ccd6; }
+.btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn.primary:hover { background: var(--primary-2); }
+.btn.ghost { background: transparent; }
+.btn.block { width: 100%; padding: 11px; margin-top: 14px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+input, select, textarea {
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+  color: var(--text);
+}
+textarea { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+
+/* ---------- Login ---------- */
+.login-wrap { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login-card {
+  background: var(--card);
+  width: 100%;
+  max-width: 360px;
+  padding: 28px 24px;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(16, 24, 40, .08);
+}
+.login-card label { display: block; margin: 18px 0 6px; font-size: 14px; }
+.login-card input { width: 100%; }
+.logo {
+  width: 46px; height: 46px; border-radius: 12px;
+  background: var(--primary); color: #fff;
+  display: grid; place-items: center; font-size: 24px; font-weight: 700; margin-bottom: 12px;
+}
+
+/* ---------- Top bar & tabs ---------- */
+.topbar {
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 16px;
+  display: flex; flex-wrap: wrap; gap: 10px;
+  align-items: center; justify-content: space-between;
+}
+.brand { font-weight: 700; font-size: 17px; }
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.month-pick { display: flex; gap: 6px; align-items: center; font-size: 14px; }
+.month-pick input { padding: 6px 8px; }
+.topbar .btn.ghost { color: #fff; border-color: rgba(255, 255, 255, .4); }
+
+.tabs {
+  display: flex; gap: 4px;
+  background: #fff; border-bottom: 1px solid var(--line);
+  padding: 0 12px; overflow-x: auto;
+}
+.tab {
+  border: 0; background: none; padding: 12px 14px;
+  font: inherit; color: var(--muted); cursor: pointer;
+  border-bottom: 3px solid transparent; white-space: nowrap;
+}
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+main { max-width: 1280px; margin: 0 auto; padding: 16px; }
+.panel { background: var(--card); border-radius: var(--radius); padding: 16px; border: 1px solid var(--line); }
+
+/* ---------- Alerts ---------- */
+.alert { border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; font-size: 14px; }
+.alert.danger { background: var(--red-bg); border: 1px solid #f3b4b4; color: #7f1d1d; }
+.alert.warn { background: var(--amber-bg); border: 1px solid #f1d38a; color: var(--amber); }
+.alert ul { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow: auto; }
+.note { background: #eef3fa; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+.note:empty { display: none; }
+
+/* ---------- Dashboard cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.card { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: #fff; }
+.card .label { font-size: 13px; color: var(--muted); }
+.card .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.card.big { background: var(--primary); color: #fff; border-color: var(--primary); }
+.card.big .label { color: rgba(255, 255, 255, .8); }
+.card.good .value { color: var(--green); }
+.card.bad .value { color: var(--red); }
+
+/* ---------- Tables ---------- */
+.table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.grid { width: 100%; border-collapse: collapse; font-size: 14px; }
+.grid th, .grid td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.grid th { background: #f7f9fc; font-weight: 600; font-size: 13px; color: #344054; position: sticky; top: 0; }
+.grid td.num, .grid th.num { text-align: right; }
+.grid tfoot td { font-weight: 700; background: #f7f9fc; }
+.grid tr.row-red td { background: #fff7f7; }
+.sub { display: block; font-size: 12px; color: var(--muted); white-space: normal; max-width: 260px; }
+.sub.neg { color: var(--red); }
+
+.status-btn { border: 0; border-radius: 20px; padding: 5px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.status-btn.paid { background: var(--green-bg); color: var(--green); }
+.status-btn.pending { background: var(--amber-bg); color: var(--amber); }
+
+/* ---------- Upload, filters, toolbar ---------- */
+.upload-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 12px 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.filters input { flex: 1 1 220px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+#tab-cash .toolbar { justify-content: flex-start; }
+
+/* ---------- Cash sheet ---------- */
+.print-head h2 { margin-top: 0; }
+.cash-table td.sign { min-width: 160px; }
+.sign-row { display: none; }
+
+/* ---------- Loader & toast ---------- */
+.loader {
+  position: fixed; inset: 0; background: rgba(255, 255, 255, .7);
+  display: flex; flex-direction: column; gap: 10px; align-items: center; justify-content: center; z-index: 50;
+}
+.spinner {
+  width: 36px; height: 36px; border: 4px solid #d0d7e2; border-top-color: var(--primary);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.toast {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  background: #1d2733; color: #fff; padding: 10px 16px; border-radius: 8px;
+  font-size: 14px; z-index: 60; max-width: calc(100% - 32px);
+}
+.toast.error { background: var(--red); }
+
+/* ---------- Mobile ---------- */
+@media (max-width: 640px) {
+  main { padding: 10px; }
+  .panel { padding: 12px; }
+  .topbar { padding: 10px 12px; }
+  .top-actions { width: 100%; }
+  .month-pick { flex: 1; }
+  .month-pick input { flex: 1; }
+  .card .value { font-size: 19px; }
+  .grid th, .grid td { padding: 7px 8px; font-size: 13px; }
+}
+
+/* ---------- Print (Cash Sheet only) ---------- */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  body { background: #fff; font-size: 12px; }
+  .no-print, .tabs, .topbar, #filterBar, .alert, .note,
+  #tab-dashboard, #tab-upload, #tab-payroll, .toast, .loader { display: none !important; }
+  #tab-cash { display: block !important; border: 0; padding: 0; }
+  main { padding: 0; max-width: none; }
+  .table-wrap { overflow: visible; }
+  .grid th { position: static; background: #eee !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .grid th, .grid td { border: 1px solid #555; padding: 6px 8px; font-size: 12px; }
+  .cash-table td { height: 34px; }
+  .cash-table tr { page-break-inside: avoid; }
+  .sign-row { display: flex; justify-content: space-between; margin-top: 50px; }
+  .sign-row div { border-top: 1px solid #000; width: 28%; text-align: center; padding-top: 4px; }
+}
+
+/* ============ v2 additions ============ */
+h2.inline { margin: 0 0 4px; }
+.upload-block { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.upload-block:last-child { border-bottom: 0; margin-bottom: 0; }
+.upload-block h2 { margin-top: 0; }
+.upload-block input[type=file] { margin: 6px 0 4px; max-width: 100%; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; margin: 10px 0; }
+.check input { margin-top: 3px; }
+.toolbar-actions { display: flex; gap: 10px; align-items: center; }
+.table-wrap.tall { max-height: 70vh; overflow: auto; }
+
+/* Monthly inputs grid */
+.grid.inputs td { padding: 5px 6px; }
+.grid.inputs input {
+  width: 108px; height: 46px; padding: 8px 10px; font-size: 16px; text-align: right; border-radius: 8px;
+}
+.grid.inputs th { font-size: 13px; }
+.grid.inputs td.ro { color: var(--muted); text-align: right; font-size: 15px; }
+.grid.inputs input.from-machine { color: #475467; }
+.grid.inputs tr.dept-row td {
+  background: #eef3fa; color: var(--primary); font-weight: 700; font-size: 14px; padding: 8px 10px;
+  position: sticky; left: 0;
+}
+.toolbar-actions .btn.small { padding: 7px 10px; font-size: 13px; }
+.grid.inputs input.dirty { border-color: var(--primary); background: #eef3fa; }
+.grid.inputs input.set { font-weight: 600; }
+.grid.inputs th.grp { text-align: center; border-left: 2px solid var(--line); }
+.grid.inputs td.grp-start, .grid.inputs th.grp-start { border-left: 2px solid var(--line); }
+.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; background: #eef3fa; color: var(--primary); }
+.tag.cash { background: var(--amber-bg); color: var(--amber); }
+.tag.warn { background: var(--red-bg); color: var(--red); }
+.name-link { background: none; border: 0; padding: 0; font: inherit; color: var(--primary); cursor: pointer; text-align: left; }
+.name-link:hover { text-decoration: underline; }
+
+/* Detail modal */
+.modal { position: fixed; inset: 0; background: rgba(16, 24, 40, .45); display: flex; align-items: center; justify-content: center; z-index: 40; padding: 16px; }
+.modal-card { background: #fff; border-radius: 14px; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; padding: 20px; position: relative; }
+.modal-close { position: absolute; right: 12px; top: 8px; border: 0; background: none; font-size: 26px; cursor: pointer; color: var(--muted); }
+.calc { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+.calc td { padding: 5px 4px; border-bottom: 1px dashed var(--line); }
+.calc td:last-child { text-align: right; white-space: nowrap; }
+.calc tr.sum td { font-weight: 700; border-bottom: 1px solid #c4ccd6; }
+.calc tr.minus td:first-child::before { content: "− "; color: var(--muted); }
+.calc tr.big td { font-size: 16px; font-weight: 700; color: var(--primary); border-bottom: 0; }
+.calc .formula { color: var(--muted); font-size: 12px; display: block; }
+
+@media print { .modal { display: none !important; } }
+
+/* Multi-select dropdown */
+.multi { position: relative; }
+.multi details > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 8px; padding: 8px 30px 8px 10px;
+  background: #fff; min-width: 190px; font-size: 15px; position: relative; white-space: nowrap; }
+.multi details > summary::-webkit-details-marker { display: none; }
+.multi details > summary::after { content: "▾"; position: absolute; right: 10px; color: var(--muted); }
+.multi-panel { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; background: #fff; border: 1px solid var(--line);
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,.12); padding: 8px; min-width: 230px; max-height: 300px; overflow: auto; }
+.multi-panel label { display: flex; gap: 8px; align-items: center; padding: 6px 6px; font-size: 15px; border-radius: 6px; cursor: pointer; }
+.multi-panel label:hover { background: #f4f6f9; }
+.multi-panel input { width: 18px; height: 18px; }
+.multi-actions { display: flex; gap: 8px; padding: 2px 4px 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.multi-actions button { border: 0; background: none; color: var(--primary); cursor: pointer; font-size: 13px; padding: 2px 4px; }
+
+/* Master page */
+.grid tr.row-off td { color: var(--muted); }
+.btn.small { padding: 6px 12px; font-size: 13px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; margin-top: 12px; }
+.form-grid label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #344054; font-weight: 600; }
+.form-grid input, .form-grid select { font-size: 15px; padding: 9px 10px; font-weight: 400; }
+.form-grid .full { grid-column: 1 / -1; }
+.req { color: var(--red); }
+.modal-card.wide { max-width: 640px; }
+@media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
+
+/* Advance page */
+.adv-head { display: flex; flex-wrap: wrap; gap: 18px 28px; align-items: flex-start; padding: 14px; border: 1px solid var(--line);
+  border-radius: 10px; background: #f7f9fc; margin-bottom: 14px; }
+.adv-head .fld { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; }
+.adv-head input[type=month] { font-size: 15px; padding: 8px 10px; }
+.adv-types { display: flex; gap: 10px; flex-wrap: wrap; }
+.adv-types label { display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 9px 14px;
+  background: #fff; cursor: pointer; font-weight: 500; font-size: 15px; }
+.adv-types label:has(input:checked) { border-color: var(--primary); background: #eef3fa; color: var(--primary); font-weight: 700; }
+.field-err { color: var(--red); font-size: 12px; font-weight: 500; }
+#advTable input[type=checkbox] { width: 20px; height: 20px; }
+#advTable input.adv-amt { width: 140px; height: 44px; font-size: 16px; text-align: right; padding: 8px 10px; }
+#advTable input.adv-amt.err { border-color: var(--red); background: var(--red-bg); }
+#advTable tr.picked td { background: #f3f8f1; }
+#advTable tr.dept-row td { background: #eef3fa; color: var(--primary); font-weight: 700; }
+.adv-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-top: 12px; }
+
+/* ============ Surface Paints branding ============ */
+:root { --primary: #3F4095; --primary-2: #2f3075; }
+.topbar { background: #fff; color: var(--text); border-bottom: 1px solid var(--line); position: relative; }
+.topbar::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 4px;
+  background: linear-gradient(90deg, #6F8FC7 0 16.6%, #3F4095 0 33.3%, #C9DA7E 0 50%, #00A651 0 66.6%, #F38936 0 83.3%, #EC3237 0); }
+.topbar .btn.ghost { color: var(--text); border-color: var(--line); }
+.tabs { margin-top: 4px; }
+.brand { display: flex; align-items: center; gap: 10px; color: #363233; }
+.top-logo { height: 34px; width: auto; }
+.login-logo { width: 220px; max-width: 100%; display: block; margin: 0 auto 16px; }
+.login-card h1 { text-align: center; }
+.center { text-align: center; }
+.print-logo { display: none; }
+@media print { .print-logo { display: block; height: 48px; width: auto; margin-bottom: 6px; } }
+</style>
+  <!-- Excel reader/writer (machine .xls, wages .xlsx, exports) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+  <!-- ============ LOGIN ============ -->
+  <section id="loginView" class="login-wrap">
+    <form id="loginForm" class="login-card" autocomplete="off">
+      <img class="logo-img login-logo" alt="Surface Paints Pvt. Ltd.">
+      <h1>Cash Payroll</h1>
+      <p class="muted center">Cash salary &amp; overtime · HR</p>
+      <label for="userId">Admin ID</label>
+      <input type="text" id="userId" autocomplete="username" autocapitalize="characters" required>
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+      <button type="submit" class="btn primary block">Log in</button>
+      <p id="loginError" class="error-text"></p>
+    </form>
+  </section>
+
+  <!-- ============ APP ============ -->
+  <div id="appView" hidden>
+    <header class="topbar no-print">
+      <div class="brand"><img class="logo-img top-logo" alt="Surface Paints"><span>Cash Payroll</span></div>
+      <div class="top-actions">
+        <label class="month-pick">Month <input type="month" id="monthInput"></label>
+        <button id="recalcBtn" class="btn" title="Re-read all tabs and recalculate this month">Recalculate</button>
+        <button id="logoutBtn" class="btn ghost">Log out</button>
+      </div>
+    </header>
+
+    <nav class="tabs no-print">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="upload">Upload</button>
+      <button class="tab" data-tab="master">Master</button>
+      <button class="tab" data-tab="inputs">Monthly Inputs</button>
+      <button class="tab" data-tab="advance">Advance</button>
+      <button class="tab" data-tab="payroll">Payroll</button>
+      <button class="tab" data-tab="cash">Cash Sheet</button>
+    </nav>
+
+    <main>
+      <div id="unmatchedBox" class="alert danger no-print" hidden></div>
+      <div id="missingBox" class="alert warn no-print" hidden></div>
+      <p id="emptyNote" class="note no-print" hidden></p>
+
+      <!-- Dashboard -->
+      <section id="tab-dashboard" class="panel">
+        <div class="cards" id="summaryCards"></div>
+        <h2>Department-wise totals</h2>
+        <div class="table-wrap"><table id="deptTable" class="grid"></table></div>
+      </section>
+
+      <!-- Upload -->
+      <section id="tab-upload" class="panel" hidden>
+        <div class="upload-block">
+          <h2>1 · Machine attendance for <span class="monthLabel"></span></h2>
+          <p class="muted">Choose the file exported from the attendance machine (ATT_MOTHLY.xls). The app reads the
+            monthly totals: present paid, holiday, leave, off days, OT hours, fooding and late marks.</p>
+          <input type="file" id="attFile" accept=".xls,.xlsx,.csv">
+          <div id="attPreview" class="note"></div>
+          <button id="attUploadBtn" class="btn primary" disabled>Save attendance &amp; calculate</button>
+        </div>
+
+        <div class="upload-block">
+          <h2>2 · Employee Master from wages sheet</h2>
+          <p class="muted">Choose your wages workbook (like WAGES_SEP_2026.xlsx). It needs the <b>ALL</b> tab; the
+            <b>WAGES</b> tab gives Form 12 Salary. Do this once, and again when employees join, leave or get increments.
+            It replaces the whole Master — after the first import, add and edit employees on the <b>Master</b> page instead.</p>
+          <input type="file" id="wagesFile" accept=".xlsx,.xls">
+          <label class="check"><input type="checkbox" id="wagesLoadMonth">
+            Also load this sheet's figures (days, OT, incentive, deductions, advance, Form 12 days) for
+            <span class="monthLabel"></span> — use this to compare the app with your sheet</label>
+          <div id="wagesPreview" class="note"></div>
+          <button id="wagesImportBtn" class="btn primary" disabled>Import Master</button>
+        </div>
+      </section>
+
+      <!-- Monthly inputs -->
+      <section id="tab-inputs" class="panel" hidden>
+        <div class="toolbar">
+          <div>
+            <h2 class="inline">Monthly inputs — <span class="monthLabel"></span></h2>
+            <p class="muted small">Boxes show this month's machine figures, suggested Form 12 days and the monthly
+              incentive (₹500 full attendance, ₹300 for one absent day). Change any box, then Save &amp; calculate.
+              Advances are entered on the Advance page.</p>
+          </div>
+          <div class="toolbar-actions">
+            <span id="dirtyCount" class="muted small"></span>
+            <button id="saveInputsBtn" class="btn primary" disabled>Save &amp; calculate</button>
+          </div>
+        </div>
+        <div class="filters">
+          <input type="search" id="inpSearch" placeholder="Search name or code">
+          <div id="inpDeptMulti" class="multi"></div>
+          <select id="inpDesig"><option value="">All designations</option></select>
+          <select id="inpType">
+            <option value="">All types</option>
+            <option value="Form 12">Form 12</option>
+            <option value="Staff">Staff (salary to bank)</option>
+            <option value="Cash">All cash</option>
+          </select>
+        </div>
+        <div class="table-wrap tall"><table id="inputsTable" class="grid inputs"></table></div>
+      </section>
+
+      <!-- Master -->
+      <section id="tab-master" class="panel" hidden>
+        <div class="toolbar">
+          <div><h2 class="inline">Employee Master</h2> <span id="mstCount" class="muted small"></span></div>
+          <button id="addEmpBtn" class="btn primary">+ Add employee</button>
+        </div>
+        <div class="filters">
+          <input type="search" id="mstSearch" placeholder="Search code, name or designation">
+          <div id="mstDeptMulti" class="multi"></div>
+          <select id="mstType"><option value="">All bank types</option><option>Form 12</option><option>Staff</option><option>Cash</option></select>
+          <select id="mstIncentive"><option value="">Incentive: all</option><option value="Yes">Incentive: Yes</option><option value="No">Incentive: No</option></select>
+          <select id="mstStatus"><option value="">All status</option><option selected>Active</option><option>Inactive</option></select>
+        </div>
+        <div class="table-wrap tall"><table id="masterTable" class="grid"></table></div>
+        <p class="muted small">Changes are saved straight to the Master tab in the Google Sheet. Set Status to Inactive
+          when someone leaves — don't delete them, old months still use their record.</p>
+      </section>
+
+      <!-- Advance -->
+      <section id="tab-advance" class="panel" hidden>
+        <h2 style="margin-top:0">Advance Management</h2>
+        <div class="adv-head">
+          <label class="fld">Month <span class="req">*</span>
+            <input type="month" id="advMonth" required>
+            <span id="advMonthErr" class="field-err">Select the month</span></label>
+          <div class="fld">Advance sheet <span class="req">*</span>
+            <div class="adv-types">
+              <label><input type="radio" name="advType" value="Bank"> Bank Advance Sheet</label>
+              <label><input type="radio" name="advType" value="Cash"> Cash Advance Sheet</label>
+            </div>
+            <span id="advTypeErr" class="field-err">Select Bank or Cash Advance Sheet</span></div>
+        </div>
+        <div id="advBody" hidden>
+          <h2 id="advTitle"></h2>
+          <div class="filters">
+            <input type="search" id="advSearch" placeholder="Search code, name or designation">
+            <div id="advDeptMulti" class="multi"></div>
+            <label class="check"><input type="checkbox" id="advOnlySel"> Show selected only</label>
+          </div>
+          <p class="muted small">Tick the employees who take an advance and enter the amount in rupees. Tick a department
+            heading to select the whole department.</p>
+          <div class="table-wrap tall"><table id="advTable" class="grid"></table></div>
+          <div class="adv-foot">
+            <b id="advSummary"></b>
+            <button id="advSaveBtn" class="btn primary">Save advances</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filters for Payroll + Cash Sheet -->
+      <div id="filterBar" class="filters no-print" hidden>
+        <input type="search" id="searchInput" placeholder="Search name or code">
+        <select id="deptFilter"><option value="">All departments</option></select>
+        <select id="statusFilter">
+          <option value="">All status</option>
+          <option value="Pending">Pending</option>
+          <option value="Paid">Paid</option>
+        </select>
+      </div>
+
+      <!-- Payroll -->
+      <section id="tab-payroll" class="panel" hidden>
+        <div class="toolbar">
+          <span id="payrollCount" class="muted"></span>
+          <button id="exportPayrollBtn" class="btn">Export full payroll to Excel</button>
+        </div>
+        <div class="table-wrap tall"><table id="payrollTable" class="grid"></table></div>
+        <p class="muted small">Click a name to see the full working. <span class="neg">Red</span> = cash would be
+          negative: shown as ₹0 and the shortfall is carried to next month as advance.</p>
+      </section>
+
+      <!-- Cash sheet -->
+      <section id="tab-cash" class="panel" hidden>
+        <div class="toolbar no-print">
+          <button id="printBtn" class="btn primary">Print / Save as PDF</button>
+          <button id="excelBtn" class="btn">Export to Excel</button>
+          <span class="muted small">Uses the filters above. Choose “Pending” to print only unpaid employees.</span>
+        </div>
+        <div id="printArea">
+          <div class="print-head">
+            <img class="logo-img print-logo" alt="Surface Paints">
+            <h2 id="printTitle"></h2>
+            <p id="printSub" class="muted"></p>
+          </div>
+          <div class="table-wrap"><table id="cashTable" class="grid cash-table"></table></div>
+          <div class="sign-row"><div>Prepared by</div><div>Checked by</div><div>Approved by</div></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Employee detail -->
+  <div id="detailModal" class="modal" hidden>
+    <div class="modal-card">
+      <button class="modal-close" id="detailClose" aria-label="Close">×</button>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <div id="empModal" class="modal" hidden>
+    <div class="modal-card wide">
+      <button class="modal-close" id="empClose" aria-label="Close">×</button>
+      <h2 id="empTitle" style="margin-top:0"></h2>
+      <form id="empForm" autocomplete="off">
+        <div class="form-grid">
+          <label>Emp Code <span class="req">*</span><input name="code" required placeholder="e.g. SP230"></label>
+          <label>Old Code<input name="oldCode" placeholder="if the machine uses an old code"></label>
+          <label class="full">Name <span class="req">*</span><input name="name" required></label>
+          <label>Department <span class="req">*</span><input name="dept" list="empDeptList" required></label>
+          <label>Designation<input name="designation" list="empDesigList"></label>
+          <label>Date of joining<input name="doj" type="date"></label>
+          <label>Bank Type <span class="req">*</span><select name="bankType" required>
+            <option value="Form 12">Form 12</option><option value="Staff">Staff (salary to bank)</option><option value="Cash">Cash</option></select></label>
+          <label>Monthly Salary ₹ <span class="req">*</span><input name="salary" type="number" min="1" step="1" required></label>
+          <label>Form 12 Salary ₹<input name="f12Salary" type="number" min="0" step="1"></label>
+          <label>Monthly Incentive<select name="incentive"><option value="Yes">Yes (₹500 / ₹300 rule)</option><option value="No">No</option></select></label>
+          <label>Status<select name="status"><option>Active</option><option>Inactive</option></select></label>
+        </div>
+        <datalist id="empDeptList"></datalist><datalist id="empDesigList"></datalist>
+        <p id="empError" class="error-text"></p>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button type="button" class="btn" id="empCancel">Cancel</button>
+          <button type="submit" class="btn primary">Save employee</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="loader" class="loader" hidden><div class="spinner"></div><span id="loaderText">Loading…</span></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script>
+
+/* ===== SETTINGS ===== */
+const COMPANY_NAME = 'Surface Paints Private Limited';
+// ▼▼ PASTE YOUR APPS SCRIPT WEB APP URL HERE (Deploy → New deployment → Web app → copy URL ending in /exec) ▼▼
+const API_URL = 'https://script.google.com/macros/s/AKfycbwfbX5osErb1Fvwst7ZS9tB2YsvcV3wNqr0VLLRRhLVG_3ALNZfVJNXqv_z4lS36-WJjw/exec';
+const LOGO = 'data:image/png;base64,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';
+document.querySelectorAll('img.logo-img').forEach(img => { img.src = LOGO; });
+
+/* ===== STATE ===== */
+const state = {
+  token: null,
+  month: '',
+  tab: 'dashboard',
+  rows: [], unmatched: [], missing: [], attendanceCount: 0, masterCount: 0,
+  inputs: null,          // employees for the Monthly Inputs grid
+  dirty: {},             // code -> true for edited rows
+  att: null,             // parsed machine file
+  wages: null            // parsed wages workbook
+};
+
+const $ = (id) => document.getElementById(id);
+const INPUT_COLS = [
+  { k: 'present', label: 'Present', machine: true },
+  { k: 'holiday', label: 'Holiday', machine: true },
+  { k: 'leave', label: 'Leave', machine: true },
+  { k: 'sunday', label: 'Sun/Off', machine: true },
+  { k: 'ot', label: 'OT hrs', machine: true },
+  { k: 'fooding', label: 'Fooding ₹', machine: true },
+  { k: 'f12Days', label: 'F12 days', group: true },
+  { k: 'incentive', label: 'Incentive ₹', group: true },
+  { k: 'extra', label: 'Extra ded. ₹', group: true },
+  { k: 'tds', label: 'TDS ₹' },
+  { k: 'late', label: 'Late ded. ₹' },
+  { k: 'loan', label: 'Loan ₹' },
+  { k: 'nats', label: 'NATS ₹' }
+];
+
+/* ================= START ================= */
+document.addEventListener('DOMContentLoaded', () => {
+  $('monthInput').value = defaultMonth();
+  state.month = $('monthInput').value;
+
+  $('loginForm').addEventListener('submit', onLogin);
+  $('logoutBtn').addEventListener('click', onLogout);
+  $('monthInput').addEventListener('change', onMonthChange);
+  $('recalcBtn').addEventListener('click', onRecalculate);
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+
+  $('attFile').addEventListener('change', onAttFile);
+  $('attUploadBtn').addEventListener('click', onAttUpload);
+  $('wagesFile').addEventListener('change', onWagesFile);
+  $('wagesLoadMonth').addEventListener('change', renderWagesPreview);
+  $('wagesImportBtn').addEventListener('click', onWagesImport);
+
+  ['inpSearch', 'inpDesig', 'inpType'].forEach(id => $(id).addEventListener('input', filterInputs));
+  $('inputsTable').addEventListener('input', onInputEdit);
+  $('inputsTable').addEventListener('paste', onInputPaste);
+  $('saveInputsBtn').addEventListener('click', onSaveInputs);
+  ['mstSearch', 'mstType', 'mstStatus', 'mstIncentive'].forEach(id => $(id).addEventListener('input', renderMasterRows));
+  $('addEmpBtn').addEventListener('click', () => openEmployee(null));
+  $('masterTable').addEventListener('click', e => { const b = e.target.closest('[data-edit]'); if (b) openEmployee(b.dataset.edit); });
+  $('empForm').addEventListener('submit', onEmpSave);
+  $('empForm').elements.bankType.addEventListener('change', onEmpTypeChange);
+  $('empClose').addEventListener('click', () => { $('empModal').hidden = true; });
+  $('empCancel').addEventListener('click', () => { $('empModal').hidden = true; });
+  $('advMonth').addEventListener('change', onAdvChoice);
+  document.querySelectorAll('input[name="advType"]').forEach(r => r.addEventListener('change', onAdvChoice));
+  ['advSearch', 'advOnlySel'].forEach(id => $(id).addEventListener('input', filterAdvance));
+  $('advTable').addEventListener('input', onAdvTableInput);
+  $('advTable').addEventListener('change', onAdvTableInput);
+  $('advSaveBtn').addEventListener('click', onAdvSave);
+
+  ['searchInput', 'deptFilter', 'statusFilter'].forEach(id =>
+    $(id).addEventListener('input', () => { renderPayroll(); renderCash(); }));
+  $('payrollTable').addEventListener('click', onPayrollClick);
+  $('printBtn').addEventListener('click', () => { renderCash(); window.print(); });
+  $('excelBtn').addEventListener('click', exportCashSheet);
+  $('exportPayrollBtn').addEventListener('click', exportPayroll);
+  $('detailClose').addEventListener('click', () => { $('detailModal').hidden = true; });
+  $('detailModal').addEventListener('click', e => { if (e.target.id === 'detailModal') $('detailModal').hidden = true; });
+
+  window.addEventListener('beforeunload', e => { if (dirtyCount()) { e.preventDefault(); e.returnValue = ''; } });
+
+  state.token = store('get', 'cp_token');
+  if (state.token) showApp(); else showLogin();
+});
+
+/* ================= API ================= */
+async function api(action, data = {}) {
+  const body = Object.assign({ action, token: state.token }, data);
+  let res;
+  if (window.google && google.script && google.script.run) {
+    res = await new Promise((ok, fail) =>
+      google.script.run.withSuccessHandler(ok).withFailureHandler(fail).apiCall(body));
+  } else {
+    if (API_URL.indexOf('https://script.google.com/') !== 0) throw new Error('Setup needed: paste the Apps Script Web App URL into API_URL in index.html.');
+    let r;
+    try { r = await fetch(API_URL, { method: 'POST', body: JSON.stringify(body) }); }   // no headers = no CORS preflight
+    catch (e) { throw new Error('Cannot reach the server. Check internet, and that the Web App access is set to "Anyone".'); }
+    if (!r.ok) throw new Error('Server error (' + r.status + ')');
+    const txt = await r.text();
+    try { res = JSON.parse(txt); }
+    catch (e) { throw new Error('Server did not answer correctly. Re-deploy the Web App with "Execute as: Me" and "Who has access: Anyone".'); }
+  }
+  if (!res || !res.ok) {
+    const msg = (res && res.error) || 'Request failed';
+    if (msg === 'SESSION_EXPIRED') { clearSession(); showLogin(); throw new Error('Session expired. Please log in again.'); }
+    throw new Error(msg);
+  }
+  return res;
+}
+
+async function run(text, fn) {
+  busy(true, text);
+  try { return await fn(); }
+  catch (err) { toast(err.message, true); }
+  finally { busy(false); }
+}
+
+/* ================= LOGIN ================= */
+async function onLogin(e) {
+  e.preventDefault();
+  $('loginError').textContent = '';
+  busy(true, 'Checking…');
+  try {
+    const res = await api('login', { userId: $('userId').value.trim(), password: $('password').value });
+    state.token = res.token;
+    store('set', 'cp_token', res.token);
+    $('password').value = '';
+    showApp();
+  } catch (err) {
+    $('loginError').textContent = err.message;
+  } finally { busy(false); }
+}
+async function onLogout() {
+  if (dirtyCount() && !confirm('You have unsaved monthly inputs. Log out anyway?')) return;
+  try { await api('logout'); } catch (e) { /* ignore */ }
+  clearSession();
+  showLogin();
+}
+function clearSession() { state.token = null; store('remove', 'cp_token'); }
+function showLogin() { $('appView').hidden = true; $('loginView').hidden = false; $('userId').focus(); }
+function showApp() { $('loginView').hidden = true; $('appView').hidden = false; showTab(state.tab); loadMonth(); }
+
+/* ================= MONTH ================= */
+function onMonthChange() {
+  const m = $('monthInput').value;
+  if (!m) return;
+  if (dirtyCount() && !confirm('You have unsaved monthly inputs. Change month and lose them?')) {
+    $('monthInput').value = state.month;
+    return;
+  }
+  state.month = m;
+  state.inputs = null;
+  state.dirty = {};
+  renderAttPreview();
+  renderWagesPreview();
+  loadMonth();
+}
+
+function setMonth(m) {
+  $('monthInput').value = m;
+  state.month = m;
+  state.inputs = null;
+  state.dirty = {};
+}
+
+async function loadMonth() {
+  document.querySelectorAll('.monthLabel').forEach(el => { el.textContent = monthLabel(state.month); });
+  await run('Loading ' + monthLabel(state.month) + '…', async () => {
+    applyData(await api('getMonth', { month: state.month }));
+    if (state.tab === 'inputs') await loadInputs();
+  });
+}
+
+async function onRecalculate() {
+  if (dirtyCount() && !confirm('Unsaved monthly inputs will be ignored. Recalculate anyway?')) return;
+  await run('Recalculating…', async () => {
+    applyData(await api('calculate', { month: state.month }));
+    toast('Recalculated ' + monthLabel(state.month));
+  });
+}
+
+function applyData(res) {
+  state.rows = res.rows || [];
+  state.unmatched = res.unmatched || [];
+  state.missing = res.missing || [];
+  state.attendanceCount = res.attendanceCount || 0;
+  state.masterCount = res.masterCount || 0;
+  fillDeptSelect($('deptFilter'), state.rows.map(r => r.dept));
+  renderAll();
+}
+
+function renderAll() {
+  document.querySelectorAll('.monthLabel').forEach(el => { el.textContent = monthLabel(state.month); });
+  renderNotices();
+  renderDashboard();
+  renderPayroll();
+  renderCash();
+}
+
+/* ================= TABS ================= */
+function showTab(tab) {
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  ['dashboard', 'upload', 'master', 'inputs', 'advance', 'payroll', 'cash'].forEach(t => { $('tab-' + t).hidden = t !== tab; });
+  $('filterBar').hidden = !(tab === 'payroll' || tab === 'cash');
+  if (tab === 'inputs' && !state.inputs && state.token) run('Loading inputs…', loadInputs);
+  if (tab === 'master' && state.token) run('Loading Master…', loadMaster);
+  if (tab === 'advance') { if (!$('advMonth').value) { $('advMonthErr').hidden = false; } onAdvChoice(); }
+}
+
+/* ================= NOTICES ================= */
+function renderNotices() {
+  const note = $('emptyNote');
+  if (!state.masterCount) {
+    note.innerHTML = 'Start here: open <b>Upload</b> and import your wages sheet to create the Employee Master.';
+    note.hidden = false;
+  } else if (!state.rows.length) {
+    note.innerHTML = `No payroll for ${monthLabel(state.month)} yet. Open <b>Upload</b> and choose the machine attendance file.`;
+    note.hidden = false;
+  } else note.hidden = true;
+
+  const un = $('unmatchedBox');
+  if (state.unmatched.length) {
+    un.innerHTML = `<b>⚠ ${state.unmatched.length} not matched — not included in payroll.</b>
+      Add them to Master (or fix the code), then click Recalculate.
+      <ul>${state.unmatched.map(u => `<li><b>${esc(u.code || '(no code)')}</b> ${esc(u.name)} ${u.dept ? '· ' + esc(u.dept) : ''}
+        ${u.days ? '· ' + u.days + ' payable days' : ''} — ${esc(u.reason)}</li>`).join('')}</ul>`;
+    un.hidden = false;
+  } else un.hidden = true;
+
+  const mi = $('missingBox');
+  if (state.missing.length) {
+    mi.innerHTML = `<b>${state.missing.length} employees in Master are not in the machine file.</b>
+      If they worked, enter their days in <b>Monthly Inputs</b>.
+      <ul>${state.missing.map(m => `<li>${esc(m.code)} — ${esc(m.name)}</li>`).join('')}</ul>`;
+    mi.hidden = false;
+  } else mi.hidden = true;
+}
+
+/* ================= DASHBOARD ================= */
+const sum = (arr, k) => arr.reduce((s, x) => s + (Number(x[k]) || 0), 0);
+
+function renderDashboard() {
+  const r = state.rows;
+  const paidRows = r.filter(x => x.status === 'Paid');
+  const pendingRows = r.filter(x => x.status !== 'Paid');
+  const suggested = r.filter(x => /suggested/i.test(x.remarks)).length;
+  const cards = [
+    { label: 'Total cash to hand over', value: rs(sum(r, 'total')), cls: 'big' },
+    { label: 'Cash salary', value: rs(sum(r, 'cashSal')) },
+    { label: 'Cash overtime', value: rs(sum(r, 'cashOT')) },
+    { label: 'Paid so far', value: rs(sum(paidRows, 'total')), sub: paidRows.length + ' employees', cls: 'good' },
+    { label: 'Still to pay', value: rs(sum(pendingRows, 'total')), sub: pendingRows.length + ' employees', cls: 'bad' },
+    { label: 'Gross salary (all)', value: rs(sum(r, 'gross')) },
+    { label: 'Bank (Form 12 + staff)', value: rs(r.reduce((s, x) => s + Math.max(x.bank, 0), 0)) },
+    { label: 'Employees in payroll', value: r.length },
+    { label: 'With PF', value: r.filter(x => x.pf > 0).length },
+    { label: 'With advance', value: r.filter(x => x.advMonth > 0 || x.advIn > 0).length },
+    { label: 'Carried forward', value: r.filter(x => x.carry > 0).length, cls: r.some(x => x.carry > 0) ? 'bad' : '' },
+    { label: 'Unmatched', value: state.unmatched.length, cls: state.unmatched.length ? 'bad' : '' },
+    { label: 'Form 12 days not confirmed', value: suggested, sub: 'check in Monthly Inputs', cls: suggested ? 'bad' : '' }
+  ];
+  $('summaryCards').innerHTML = cards.map(c =>
+    `<div class="card ${c.cls || ''}"><div class="label">${c.label}</div><div class="value">${c.value}</div>${c.sub ? `<div class="label">${c.sub}</div>` : ''}</div>`).join('');
+
+  const depts = {};
+  r.forEach(x => {
+    const d = depts[x.dept] || (depts[x.dept] = { n: 0, gross: 0, bank: 0, cashSal: 0, cashOT: 0, total: 0, pending: 0 });
+    d.n++; d.gross += x.gross; d.bank += Math.max(x.bank, 0); d.cashSal += x.cashSal; d.cashOT += x.cashOT; d.total += x.total;
+    if (x.status !== 'Paid') d.pending += x.total;
+  });
+  const names = Object.keys(depts).sort();
+  if (!names.length) { $('deptTable').innerHTML = '<tr><td class="muted">No data for this month.</td></tr>'; return; }
+  const row = (n, d, tag) => `<${tag}><td>${esc(n)}</td><td class="num">${d.n}</td><td class="num">${rs(d.gross)}</td><td class="num">${rs(d.bank)}</td>
+    <td class="num">${rs(d.cashSal)}</td><td class="num">${rs(d.cashOT)}</td><td class="num"><b>${rs(d.total)}</b></td><td class="num">${rs(d.pending)}</td></${tag}>`;
+  const all = names.reduce((t, n) => { Object.keys(t).forEach(k => { t[k] += depts[n][k]; }); return t; },
+    { n: 0, gross: 0, bank: 0, cashSal: 0, cashOT: 0, total: 0, pending: 0 });
+  $('deptTable').innerHTML =
+    `<thead><tr><th>Department</th><th class="num">Employees</th><th class="num">Gross</th><th class="num">Bank</th>
+      <th class="num">Cash salary</th><th class="num">Cash OT</th><th class="num">Total cash</th><th class="num">Pending</th></tr></thead>
+     <tbody>${names.map(n => row(n, depts[n], 'tr')).join('')}</tbody>
+     <tfoot>${row('Total', all, 'tr')}</tfoot>`;
+}
+
+/* ================= FILTERS ================= */
+function fillDeptSelect(sel, values) {
+  const current = sel.value;
+  const depts = [...new Set(values.filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">All departments</option>' + depts.map(d => `<option>${esc(d)}</option>`).join('');
+  if (depts.includes(current)) sel.value = current;
+}
+function filteredRows() {
+  const q = $('searchInput').value.trim().toLowerCase();
+  const d = $('deptFilter').value, s = $('statusFilter').value;
+  return state.rows.filter(r =>
+    (!q || r.name.toLowerCase().includes(q) || r.code.toLowerCase().includes(q)) &&
+    (!d || r.dept === d) && (!s || r.status === s));
+}
+
+/* ================= PAYROLL ================= */
+function deductions(r) { return r.extra + r.tds + r.late + r.loan + r.nats + r.advMonth + r.advIn + r.esic + r.pf; }
+
+function renderPayroll() {
+  const rows = filteredRows();
+  $('payrollCount').textContent = `${rows.length} of ${state.rows.length} employees`;
+  if (!rows.length) { $('payrollTable').innerHTML = '<tr><td class="muted">No employees to show.</td></tr>'; return; }
+  $('payrollTable').innerHTML =
+    `<thead><tr><th>Code</th><th>Name</th><th>Dept</th><th class="num">Days</th><th class="num">OT hrs</th>
+      <th class="num">Gross</th><th class="num">Deductions</th><th class="num">Balance</th><th class="num">Bank</th>
+      <th class="num">Cash salary</th><th class="num">Cash OT</th><th class="num">Total cash</th><th>Status</th></tr></thead>
+    <tbody>${rows.map(r => {
+      const red = r.carry > 0;
+      const tag = r.bankType === 'Form 12' ? `<span class="tag">F12 · ${r.f12Days}d</span>`
+        : r.bankType === 'Staff' ? '<span class="tag">Staff · bank</span>' : '<span class="tag cash">All cash</span>';
+      const warn = /suggested/i.test(r.remarks) ? ' <span class="tag warn" title="Form 12 days were suggested, not confirmed">check F12</span>' : '';
+      return `<tr class="${red ? 'row-red' : ''}">
+        <td>${esc(r.code)}</td>
+        <td><button class="name-link" data-detail="${esc(r.code)}">${esc(r.name)}</button><span class="sub">${tag}${warn}</span></td>
+        <td>${esc(r.dept)}</td>
+        <td class="num">${r.payable}</td><td class="num">${r.otHours}</td>
+        <td class="num">${rs(r.gross)}</td><td class="num">${rs(deductions(r))}</td><td class="num">${rs(r.balance)}</td>
+        <td class="num">${rs(r.bank)}</td>
+        <td class="num ${red ? 'neg' : ''}">${rs(r.cashSal)}${red ? `<span class="sub neg">${rs(r.carry)} carried fwd</span>` : ''}</td>
+        <td class="num">${rs(r.cashOT)}</td>
+        <td class="num"><b>${rs(r.total)}</b></td>
+        <td><button class="status-btn ${r.status === 'Paid' ? 'paid' : 'pending'}" data-code="${esc(r.code)}"
+             title="${r.paidOn ? 'Paid on ' + esc(r.paidOn) : 'Click to mark as paid'}">${r.status}</button></td></tr>`;
+    }).join('')}</tbody>
+    <tfoot><tr><td colspan="3">Total</td><td class="num">${round2(sum(rows, 'payable'))}</td><td class="num">${round2(sum(rows, 'otHours'))}</td>
+      <td class="num">${rs(sum(rows, 'gross'))}</td><td class="num">${rs(rows.reduce((s, r) => s + deductions(r), 0))}</td>
+      <td class="num">${rs(sum(rows, 'balance'))}</td><td class="num">${rs(sum(rows, 'bank'))}</td>
+      <td class="num">${rs(sum(rows, 'cashSal'))}</td><td class="num">${rs(sum(rows, 'cashOT'))}</td>
+      <td class="num">${rs(sum(rows, 'total'))}</td><td></td></tr></tfoot>`;
+}
+
+async function onPayrollClick(e) {
+  const d = e.target.closest('[data-detail]');
+  if (d) return showDetail(d.dataset.detail);
+  const btn = e.target.closest('.status-btn');
+  if (!btn) return;
+  const row = state.rows.find(r => r.code === btn.dataset.code);
+  if (!row) return;
+  const next = row.status === 'Paid' ? 'Pending' : 'Paid';
+  if (next === 'Pending' && !confirm(`Mark ${row.name} as PENDING again?`)) return;
+  btn.disabled = true;
+  try {
+    const res = await api('setPaid', { month: state.month, code: row.code, status: next });
+    row.status = res.status;
+    row.paidOn = res.paidOn;
+    renderDashboard(); renderPayroll(); renderCash();
+    toast(`${row.name}: ${res.status}`);
+  } catch (err) { toast(err.message, true); btn.disabled = false; }
+}
+
+function showDetail(code) {
+  const r = state.rows.find(x => x.code === code);
+  if (!r) return;
+  const line = (label, val, cls, formula) =>
+    `<tr class="${cls || ''}"><td>${label}${formula ? `<span class="formula">${formula}</span>` : ''}</td><td>${val}</td></tr>`;
+  const minus = (label, v) => v ? line(label, rs(v), 'minus') : '';
+  const f12Earned = r.bank + r.esic + r.pf;
+  const bankLine = r.bankType === 'Form 12'
+    ? line('Bank (Form 12)', rs(r.bank), 'minus', `Form 12 earned ${rs(f12Earned)} (Form 12 salary ÷ 30 × ${r.f12Days} days) − ESIC − PF`)
+    : r.bankType === 'Staff'
+      ? line('Bank (staff salary)', rs(r.bank), 'minus', 'Balance − (OT pay + fooding + incentive), paid to bank')
+      : line('Bank', rs(0), 'minus', 'All cash');
+  $('detailBody').innerHTML = `
+    <h2 style="margin-top:0">${esc(r.name)}</h2>
+    <p class="muted small">${esc(r.code)} · ${esc(r.dept)} · Salary ${rs(r.salary)} · ${monthLabel(state.month)}</p>
+    <table class="calc">
+      ${line('Payable days', r.payable, '', `Present ${r.present} + Holiday ${r.holiday} + Leave ${r.leave} + Sun/Off ${r.sunday}`)}
+      ${line('Earning', rs(r.earning), '', `${r.payable} × ${rs(r.salary)} ÷ days in month`)}
+      ${line('OT pay', rs(r.otPay), '', `${r.otHours} hrs × salary ÷ 26 ÷ 8`)}
+      ${r.fooding ? line('Fooding', rs(r.fooding), '', 'food amount from the machine file') : ''}
+      ${r.incentive ? line('Incentive', rs(r.incentive), '', '₹500 full attendance · ₹300 one absent day (or as typed)') : ''}
+      ${line('Gross salary', rs(r.gross), 'sum')}
+      ${minus('Extra deduction', r.extra)}${minus('TDS', r.tds)}
+      ${minus('Late deduction', r.late)}
+      ${minus('Loan', r.loan)}${minus('NATS', r.nats)}${minus('Bank advance', r.advBank)}${minus('Cash advance', r.advCash)}
+      ${minus('Advance carried from last month', r.advIn)}
+      ${r.esic ? line('ESIC', rs(r.esic), 'minus', `0.75% of salary ${rs(r.salary)}`) : ''}
+      ${r.pf ? line('PF', rs(r.pf), 'minus', `12% of Form 12 earned ${rs(f12Earned)}`) : ''}
+      ${line('Balance', rs(r.balance), 'sum')}
+      ${bankLine}
+      ${line('Net to pay in cash', r.net < 0 ? `<span class="neg">${rs(r.net)}</span>` : rs(r.net), 'sum')}
+      ${r.carry ? line('<span class="neg">Carried to next month</span>', `<span class="neg">${rs(r.carry)}</span>`) : ''}
+      ${line('Cash OT', rs(r.cashOT))}
+      ${line('Cash salary', rs(r.cashSal))}
+      ${line('Total cash to hand over', rs(r.total), 'big')}
+    </table>
+    ${r.remarks ? `<p class="muted small">${esc(r.remarks)}</p>` : ''}`;
+  $('detailModal').hidden = false;
+}
+
+/* ================= CASH SHEET ================= */
+function cashRows() { return filteredRows().filter(r => r.total > 0); }
+
+function renderCash() {
+  const rows = cashRows();
+  const total = sum(rows, 'total');
+  $('printTitle').textContent = `${COMPANY_NAME} — Cash Payment Sheet — ${monthLabel(state.month)}`;
+  $('printSub').textContent = `Employees: ${rows.length}   |   Total cash: ${rs(total)}   |   Printed: ${new Date().toLocaleString('en-IN')}`;
+  if (!rows.length) { $('cashTable').innerHTML = '<tr><td class="muted">No cash payments for the current filters.</td></tr>'; return; }
+  $('cashTable').innerHTML =
+    `<thead><tr><th>S.No</th><th>Emp Code</th><th>Name</th><th>Department</th>
+      <th class="num">Cash salary</th><th class="num">Cash OT</th><th class="num">Total</th><th>Signature</th></tr></thead>
+     <tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.dept)}</td>
+       <td class="num">${rs(r.cashSal)}</td><td class="num">${rs(r.cashOT)}</td><td class="num"><b>${rs(r.total)}</b></td>
+       <td class="sign"></td></tr>`).join('')}</tbody>
+     <tfoot><tr><td colspan="4">Total</td><td class="num">${rs(sum(rows, 'cashSal'))}</td>
+       <td class="num">${rs(sum(rows, 'cashOT'))}</td><td class="num">${rs(total)}</td><td></td></tr></tfoot>`;
+}
+
+/* ================= EXCEL EXPORT ================= */
+function exportCashSheet() {
+  const rows = cashRows();
+  if (!rows.length) return toast('Nothing to export', true);
+  const data = [[`${COMPANY_NAME} — Cash Payment Sheet — ${monthLabel(state.month)}`], [],
+    ['S.No', 'Emp Code', 'Name', 'Department', 'Cash Salary', 'Cash Overtime', 'Total Cash', 'Status', 'Signature']];
+  rows.forEach((r, i) => data.push([i + 1, r.code, r.name, r.dept, r.cashSal, r.cashOT, r.total, r.status, '']));
+  data.push(['', '', '', 'TOTAL', sum(rows, 'cashSal'), sum(rows, 'cashOT'), sum(rows, 'total'), '', '']);
+  downloadSheet(data, `Cash_Sheet_${state.month}`, [6, 10, 28, 14, 12, 12, 12, 10, 24]);
+}
+
+function exportPayroll() {
+  const rows = filteredRows();
+  if (!rows.length) return toast('Nothing to export', true);
+  const cols = [['code', 'Emp Code'], ['name', 'Name'], ['dept', 'Department'], ['bankType', 'Bank Type'], ['salary', 'Salary'],
+    ['present', 'Attendance'], ['holiday', 'Holiday'], ['leave', 'Leave'], ['sunday', 'Sunday/Off'], ['payable', 'Total Days'],
+    ['otHours', 'OT Hours'], ['earning', 'Total Earning'], ['otPay', 'OT Pay'], ['fooding', 'Fooding'], ['incentive', 'Incentive'],
+    ['gross', 'Salary (Gross)'], ['extra', 'Extra Deduction'], ['tds', 'TDS'], ['lateMarks', 'Late Marks'], ['late', 'Late Deduction'], ['loan', 'Loan'],
+    ['nats', 'NATS'], ['advBank', 'Bank Advance'], ['advCash', 'Cash Advance'], ['advMonth', 'Advance Total'], ['advIn', 'Advance Carried In'], ['esic', 'ESIC'], ['pf', 'PF'],
+    ['balance', 'Balance'], ['f12Days', 'Form 12 Days'], ['bank', 'Bank Amount'], ['net', 'Net to Pay'],
+    ['cashSal', 'Cash Salary'], ['cashOT', 'Cash OT'], ['total', 'Total Cash'], ['carry', 'Carry Forward'],
+    ['status', 'Status'], ['paidOn', 'Paid On'], ['remarks', 'Remarks']];
+  const data = [cols.map(c => c[1])];
+  rows.forEach(r => data.push(cols.map(c => r[c[0]])));
+  downloadSheet(data, `Payroll_${state.month}`);
+}
+
+function downloadSheet(data, fileName, widths) {
+  if (!window.XLSX) return toast('Excel library did not load. Check your internet and refresh.', true);
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  if (widths) ws['!cols'] = widths.map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, fileName + '.xlsx');
+}
+
+/* ================= MACHINE ATTENDANCE FILE ================= */
+async function onAttFile(e) {
+  const file = e.target.files[0];
+  state.att = null;
+  renderAttPreview();
+  if (!file) return;
+  try {
+    const rows = await readSheetRows(file);
+    state.att = parseMachine(rows);
+    if (state.att.month && state.att.month !== state.month) {
+      if (confirm(`This file is for ${monthLabel(state.att.month)}, but ${monthLabel(state.month)} is selected.\nSwitch to ${monthLabel(state.att.month)}?`)) {
+        if (dirtyCount() && !confirm('Unsaved monthly inputs will be lost. Continue?')) { renderAttPreview(); return; }
+        setMonth(state.att.month);
+        loadMonth();
+      }
+    }
+  } catch (err) {
+    state.att = { error: err.message };
+  }
+  renderAttPreview();
+}
+
+function parseMachine(rows) {
+  const h = rows.findIndex(r => r.some(c => String(c).trim().toLowerCase() === 'paycode'));
+  if (h < 0) throw new Error('Could not find the "paycode" column. Is this the machine attendance export?');
+  const head = rows[h].map(c => String(c).trim().toLowerCase());
+  const col = name => head.indexOf(name);
+  const need = ['paycode', 'totalpresentpaid', 'totaloffpaid', 'totalot'];
+  const lost = need.filter(n => col(n) < 0);
+  if (lost.length) throw new Error('Missing column(s) in machine file: ' + lost.join(', '));
+  const get = (r, name) => (col(name) >= 0 ? r[col(name)] : '');
+  const n = v => { const x = parseFloat(String(v).replace(/,/g, '')); return isNaN(x) ? 0 : x; };
+
+  let month = '';
+  const out = [];
+  rows.slice(h + 1).forEach(r => {
+    const code = String(get(r, 'paycode')).trim();
+    if (!code) return;
+    if (!month) month = monthFromDate(get(r, 'date1'));
+    out.push({
+      code, name: String(get(r, 'name')).trim(), dept: String(get(r, 'department')).trim(),
+      present: n(get(r, 'totalpresentpaid')), holiday: n(get(r, 'totalholidaypaid')),
+      leave: n(get(r, 'totalleavepaid')), off: n(get(r, 'totaloffpaid')),
+      ot: n(get(r, 'totalot')), fooding: n(get(r, 'foodamt')),
+      absent: n(get(r, 'totalabsent')), late: n(get(r, 'latecutdays'))
+    });
+  });
+  return { rows: out, month };
+}
+
+function renderAttPreview() {
+  const box = $('attPreview'), btn = $('attUploadBtn');
+  const a = state.att;
+  btn.disabled = true;
+  if (!a) { box.innerHTML = ''; return; }
+  if (a.error) { box.innerHTML = `<span class="neg">${esc(a.error)}</span>`; return; }
+  const wrong = a.month && a.month !== state.month;
+  box.innerHTML = `<b>${a.rows.length}</b> employees read${a.month ? ' · file month <b>' + monthLabel(a.month) + '</b>' : ''} ·
+    total OT ${round2(sum(a.rows, 'ot'))} hrs · fooding ${rs(sum(a.rows, 'fooding'))} · late marks ${sum(a.rows, 'late')}
+    ${wrong ? `<br><span class="neg">The file month does not match ${monthLabel(state.month)}. Change the month at the top first.</span>` : ''}`;
+  btn.disabled = wrong || !a.rows.length;
+}
+
+async function onAttUpload() {
+  const a = state.att;
+  if (!a || !a.rows.length) return;
+  if (!confirm(`Save machine attendance for ${monthLabel(state.month)}?\nAttendance already saved for this month will be replaced.`)) return;
+  await run('Saving attendance & calculating…', async () => {
+    const res = await api('uploadAttendance', { month: state.month, rows: a.rows });
+    applyData(res);
+    state.inputs = null;
+    state.att = null;
+    $('attFile').value = '';
+    renderAttPreview();
+    toast(`${res.uploaded} employees saved`);
+    showTab(state.missing.length || state.rows.some(r => /suggested/i.test(r.remarks)) ? 'inputs' : 'dashboard');
+  });
+}
+
+/* ================= WAGES SHEET → MASTER ================= */
+async function onWagesFile(e) {
+  const file = e.target.files[0];
+  state.wages = null;
+  renderWagesPreview();
+  if (!file) return;
+  try {
+    const wb = await readWorkbook(file);
+    state.wages = parseWages(wb);
+  } catch (err) {
+    state.wages = { error: err.message };
+  }
+  renderWagesPreview();
+}
+
+const norm = s => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function sheetTable(wb, name) {
+  const sn = wb.SheetNames.find(s => s.trim().toUpperCase() === name);
+  if (!sn) return null;
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '', raw: true });
+  const h = rows.findIndex(r => r.some(c => norm(c) === 'newcode') && r.some(c => norm(c) === 'name'));
+  if (h < 0) return null;
+  const head = rows[h].map(norm);
+  const idx = name2 => head.indexOf(name2);    // first match (SALARY before Salary)
+  return { rows: rows.slice(h + 1), idx };
+}
+
+function parseWages(wb) {
+  const all = sheetTable(wb, 'ALL');
+  if (!all) throw new Error('Could not find the "ALL" tab with NEW CODE and Name columns.');
+  const wages = sheetTable(wb, 'WAGES');
+  const n = v => (v instanceof Date) ? 0 : (isNaN(parseFloat(v)) ? 0 : parseFloat(v));
+  const s = v => String(v == null ? '' : v).trim();
+  const keyOf = v => s(v).toUpperCase().replace(/\.0+$/, '');
+
+  // Form 12 salary + days from WAGES tab
+  const f12 = {};
+  if (wages) {
+    const g = c => wages.idx(c);
+    wages.rows.forEach(r => {
+      const k = keyOf(r[g('newcode')]) || keyOf(r[g('oldcode')]);
+      if (k) f12[k] = { salary: n(r[g('form12salary')]), days: n(r[g('form12days')]) };
+    });
+  }
+
+  const A = all.idx;
+  const get = (r, c) => (A(c) >= 0 ? r[A(c)] : '');
+  const employees = [], inputs = [], advances = [];
+  const seen = {};
+  let dupCount = 0;
+  all.rows.forEach(r => {
+    const name = s(get(r, 'name'));
+    let code = keyOf(get(r, 'newcode')) || keyOf(get(r, 'oldcode'));
+    if (!code || !name) return;
+    const base = code;
+    let i = 1;
+    while (seen[code]) { i++; code = base + '-' + i; }
+    if (i > 1) dupCount++;
+    seen[code] = true;
+
+    // Form 12 = listed in the WAGES tab with a Form 12 salary. Only if there is no WAGES tab, use "real".
+    const f = f12[base] || null;
+    const f12Salary = wages ? (f ? f.salary : 0) : n(get(r, 'real'));
+    const doj = get(r, 'doj');
+    employees.push({
+      code, oldCode: keyOf(get(r, 'oldcode')), name, dept: s(get(r, 'department')).toUpperCase(),
+      designation: s(get(r, 'designation')),
+      doj: doj instanceof Date ? isoDate(doj) : s(doj),
+      salary: n(get(r, 'salary')), f12Salary,
+      bank: f12Salary > 0 ? 0 : n(get(r, 'salaryform12')),
+      incentive: n(get(r, 'incentive')) > 0 ? 'Yes' : 'No'
+    });
+    inputs.push({
+      code, f12Days: f12Salary > 0 ? (f ? f.days : '') : '',
+      present: n(get(r, 'attendence')), holiday: n(get(r, 'holiday')),
+      leave: n(get(r, 'el')) + n(get(r, 'cl')), sunday: n(get(r, 'sunday')),
+      ot: n(get(r, 'ot')), fooding: n(get(r, 'fooding')), incentive: n(get(r, 'incentive')),
+      extra: n(get(r, 'extradeduction')), tds: n(get(r, 'tds')), late: n(get(r, 'latededuction')),
+      loan: n(get(r, 'loan')), nats: n(get(r, 'nats')),
+      _net: n(get(r, 'nettopay'))
+    });
+    const adv = n(get(r, 'advance'));
+    if (adv) advances.push({ code, amount: adv });
+  });
+  if (!employees.length) throw new Error('No employees found in the ALL tab.');
+  return { employees, inputs, advances, dupCount, hasWagesTab: !!wages };
+}
+
+function renderWagesPreview() {
+  const box = $('wagesPreview'), btn = $('wagesImportBtn');
+  const w = state.wages;
+  btn.disabled = true;
+  if (!w) { box.innerHTML = ''; return; }
+  if (w.error) { box.innerHTML = `<span class="neg">${esc(w.error)}</span>`; return; }
+  const e = w.employees;
+  const form12 = e.filter(x => x.f12Salary > 0).length;
+  const fixed = e.filter(x => !(x.f12Salary > 0) && x.bank > 0).length;
+  const cash = e.length - form12 - fixed;
+  const withMonth = $('wagesLoadMonth').checked;
+  box.innerHTML = `<b>${e.length}</b> employees · ${form12} Form 12 · ${fixed} staff (salary to bank) · ${cash} all cash
+    ${w.hasWagesTab ? '' : '<br><span class="neg">No WAGES tab found — Form 12 salary taken from the "real" column.</span>'}
+    ${w.dupCount ? `<br><span class="neg">${w.dupCount} duplicate code(s) found (e.g. 9999). They get “-2”, “-3”… — give them proper codes in Master later.</span>` : ''}
+    ${withMonth ? `<br>Will also load ${monthLabel(state.month)} figures and ${w.advances.length} advance entries from this sheet. These replace machine figures for this month.` : ''}`;
+  btn.disabled = false;
+  btn.textContent = withMonth ? `Import Master + ${monthLabel(state.month)} figures` : 'Import Master';
+}
+
+async function onWagesImport() {
+  const w = state.wages;
+  if (!w || !w.employees) return;
+  const withMonth = $('wagesLoadMonth').checked;
+  if (!confirm(`Replace the whole Employee Master with ${w.employees.length} employees from this sheet?` +
+    (withMonth ? `\n\nThis will also replace the monthly inputs for ${monthLabel(state.month)}.` : ''))) return;
+  await run('Importing…', async () => {
+    const payload = { employees: w.employees };
+    if (withMonth) {
+      payload.month = state.month;
+      payload.inputs = w.inputs.map(({ _net, ...rest }) => rest);
+      payload.advances = w.advances;
+    }
+    const res = await api('importMaster', payload);
+    const msg = [`${res.imported} employees imported into Master.`].concat(res.warnings || []);
+    state.inputs = null;
+    state.dirty = {};
+    applyData(await api('getMonth', { month: state.month }));
+    if (withMonth) msg.push(compareWithSheet(w.inputs));
+    alert(msg.join('\n'));
+    state.wages = null;
+    $('wagesFile').value = '';
+    renderWagesPreview();
+  });
+}
+
+/** After loading a month from the wages sheet, compare our Net to Pay with the sheet's. */
+function compareWithSheet(inputs) {
+  const mine = {};
+  state.rows.forEach(r => { mine[r.code] = r.net; });
+  let same = 0, diff = [];
+  inputs.forEach(i => {
+    if (!(i.code in mine)) return;
+    if (Math.abs(mine[i.code] - i._net) <= 1) same++; else diff.push(`${i.code}: sheet ${i._net}, app ${mine[i.code]}`);
+  });
+  return `Check against your sheet: ${same} of ${same + diff.length} employees match Net to Pay.` +
+    (diff.length ? '\nDifferent:\n' + diff.slice(0, 15).join('\n') : '');
+}
+
+/* ================= MONTHLY INPUTS GRID ================= */
+async function loadInputs() {
+  const res = await api('getInputs', { month: state.month });
+  state.inputs = res.employees;
+  state.dirty = {};
+  renderInputs();
+}
+
+/** Value shown in a box: saved value → else machine value / suggested Form 12 days → else blank. */
+function shownValue(e, c) {
+  const saved = e.inputs ? e.inputs[c.k] : '';
+  if (saved !== '' && saved != null) return saved;
+  if (c.k === 'f12Days') return e.suggestedF12;
+  if (c.k === 'incentive') return e.suggestedIncentive || '';
+  if (c.machine && e.machine) return e.machine[c.k];
+  return '';
+}
+/** Machine / suggested value (what the app would use anyway). */
+function baseValue(e, c) {
+  if (c.k === 'f12Days') return e.suggestedF12;
+  if (c.k === 'incentive') return e.suggestedIncentive || '';
+  if (c.machine && e.machine) return e.machine[c.k];
+  return '';
+}
+
+function renderInputs() {
+  const list = state.inputs || [];
+  makeMulti('inpDeptMulti', list.map(e => e.dept), filterInputs);
+  fillDeptSelect($('inpDesig'), list.map(e => (e.designation || '').toUpperCase()));
+  $('inpDesig').options[0].textContent = 'All designations';
+  updateDirty();
+  if (!list.length) { $('inputsTable').innerHTML = '<tr><td class="muted">No employees in Master yet.</td></tr>'; return; }
+  const ncols = INPUT_COLS.length + 5;
+  const head = INPUT_COLS.map(c => `<th class="num ${c.group ? 'grp-start' : ''}">${c.label}</th>`).join('');
+  const counts = {};
+  list.forEach(e => { counts[e.dept] = (counts[e.dept] || 0) + 1; });
+  let lastDept = null;
+  const body = list.map(e => {
+    let html = '';
+    if (e.dept !== lastDept) {
+      lastDept = e.dept;
+      html += `<tr class="dept-row" data-dept-head="${esc(e.dept)}"><td colspan="${ncols}">${esc(e.dept)} · ${counts[e.dept]} employees</td></tr>`;
+    }
+    const cells = INPUT_COLS.map(c => {
+      if (c.k === 'f12Days' && e.bankType !== 'Form 12') return `<td class="num grp-start muted">—</td>`;
+      const v = shownValue(e, c), b = baseValue(e, c);
+      const saved = e.inputs && e.inputs[c.k] !== '' && e.inputs[c.k] != null;
+      const cls = saved && String(v) !== String(b) ? 'set' : (v !== '' ? 'from-machine' : '');
+      return `<td class="${c.group ? 'grp-start' : ''}"><input type="number" step="any" inputmode="decimal"
+        data-k="${c.k}" data-base="${esc(b)}" value="${esc(v)}" class="${cls}"></td>`;
+    }).join('');
+    const flag = !e.machine ? ' <span class="tag warn">not in machine</span>' : '';
+    const type = e.bankType === 'Form 12' ? 'F12' : e.bankType === 'Staff' ? 'Staff' : 'Cash';
+    return html + `<tr data-code="${esc(e.code)}" data-dept="${esc(e.dept)}" data-type="${esc(e.bankType)}"
+      data-desig="${esc((e.designation || '').toUpperCase())}" data-search="${esc((e.code + ' ' + e.name).toLowerCase())}">
+      <td>${esc(e.code)}</td><td>${esc(e.name)}<span class="sub">${type}${e.designation ? ' · ' + esc(e.designation) : ''}${flag}</span></td>
+      <td class="num">${e.payable}</td><td class="ro">${e.machine ? e.machine.absent : '—'}</td>
+      <td class="ro">${e.machine ? e.machine.lateMarks : '—'}</td>${cells}</tr>`;
+  }).join('');
+  $('inputsTable').innerHTML = `<thead><tr><th>Code</th><th>Name</th><th class="num">Days</th><th class="num" title="Absent days in the machine file">Absent</th>
+    <th class="num" title="Late marks in the machine file (for information — no automatic cut)">Late marks</th>${head}</tr></thead><tbody>${body}</tbody>`;
+  filterInputs();
+}
+
+function filterInputs() {
+  const q = $('inpSearch').value.trim().toLowerCase();
+  const t = $('inpType').value, g = $('inpDesig').value;
+  const shown = {};
+  document.querySelectorAll('#inputsTable tbody tr[data-code]').forEach(tr => {
+    tr.hidden = !((!q || tr.dataset.search.includes(q)) && multiHas('inpDeptMulti', tr.dataset.dept) &&
+                  (!g || tr.dataset.desig === g) && (!t || tr.dataset.type === t));
+    if (!tr.hidden) shown[tr.dataset.dept] = true;
+  });
+  document.querySelectorAll('#inputsTable tbody tr[data-dept-head]').forEach(tr => { tr.hidden = !shown[tr.dataset.deptHead]; });
+}
+
+function markEdited(inp) {
+  inp.classList.add('dirty');
+  inp.classList.remove('from-machine');
+  inp.classList.toggle('set', inp.value !== '' && inp.value !== inp.dataset.base);
+  state.dirty[inp.closest('tr').dataset.code] = true;
+}
+
+function onInputEdit(e) {
+  const inp = e.target.closest('input[data-k]');
+  if (!inp) return;
+  markEdited(inp);
+  updateDirty();
+}
+
+/** Paste a column from Excel: fills this cell and the visible employee rows below it. */
+function onInputPaste(e) {
+  const inp = e.target.closest('input[data-k]');
+  if (!inp) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!/[\n\t]/.test(text.trim())) return;
+  e.preventDefault();
+  const values = text.replace(/\r/g, '').split('\n').map(l => l.split('\t')[0].trim());
+  while (values.length && values[values.length - 1] === '') values.pop();
+  const k = inp.dataset.k;
+  let tr = inp.closest('tr');
+  let i = 0;
+  while (tr && i < values.length) {
+    if (!tr.hidden && tr.dataset.code) {
+      const cell = tr.querySelector(`input[data-k="${k}"]`);
+      if (cell) { cell.value = values[i].replace(/,/g, ''); markEdited(cell); }
+      i++;
+    }
+    tr = tr.nextElementSibling;
+  }
+  updateDirty();
+  toast(`Pasted ${i} values`);
+}
+
+function dirtyCount() { return Object.keys(state.dirty).length; }
+function updateDirty() {
+  const n = dirtyCount();
+  $('dirtyCount').textContent = n ? `${n} employee${n > 1 ? 's' : ''} changed` : '';
+  $('saveInputsBtn').disabled = !n;
+}
+
+async function onSaveInputs() {
+  const rows = Object.keys(state.dirty).map(code => {
+    const tr = document.querySelector(`#inputsTable tr[data-code="${cssEsc(code)}"]`);
+    const o = { code };
+    INPUT_COLS.forEach(c => {
+      const cell = tr && tr.querySelector(`input[data-k="${c.k}"]`);
+      const v = cell ? cell.value.trim() : '';
+      // A box still equal to the machine figure / incentive rule is not stored, so a re-upload still updates it.
+      // Form 12 days are always stored: saving them means HR has checked them.
+      o[c.k] = (c.k !== 'f12Days' && cell && cell.dataset.base !== '' && v === cell.dataset.base) ? '' : v;
+    });
+    return o;
+  });
+  if (!rows.length) return;
+  await run('Saving & calculating…', async () => {
+    applyData(await api('saveInputs', { month: state.month, rows }));
+    await loadInputs();
+    toast(`Saved ${rows.length} employees`);
+  });
+}
+
+/* ================= MULTI-SELECT (departments) ================= */
+const multi = {};   // id -> { values: [], selected: Set, onChange }
+function makeMulti(id, values, onChange) {
+  const box = $(id);
+  const m = multi[id] || (multi[id] = { selected: new Set(), onChange });
+  m.onChange = onChange;
+  m.values = [...new Set(values.filter(Boolean))].sort();
+  [...m.selected].forEach(v => { if (!m.values.includes(v)) m.selected.delete(v); });
+  const open = box.querySelector('details') && box.querySelector('details').open;
+  box.innerHTML = `<details${open ? ' open' : ''}><summary></summary><div class="multi-panel">
+      <div class="multi-actions"><button type="button" data-all>Select all</button><button type="button" data-none>Clear</button></div>
+      ${m.values.map(v => `<label><input type="checkbox" value="${esc(v)}" ${m.selected.has(v) ? 'checked' : ''}> ${esc(v)}</label>`).join('')}
+    </div></details>`;
+  const sync = () => {
+    const n = m.selected.size;
+    box.querySelector('summary').textContent = !n || n === m.values.length ? 'All departments'
+      : n <= 2 ? [...m.selected].join(', ') : `${n} departments`;
+  };
+  box.querySelectorAll('input[type=checkbox]').forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) m.selected.add(cb.value); else m.selected.delete(cb.value);
+    sync(); m.onChange();
+  }));
+  box.querySelector('[data-all]').addEventListener('click', () => {
+    m.values.forEach(v => m.selected.add(v)); box.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = true; }); sync(); m.onChange();
+  });
+  box.querySelector('[data-none]').addEventListener('click', () => {
+    m.selected.clear(); box.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; }); sync(); m.onChange();
+  });
+  sync();
+}
+/** true if this department passes the multi-select (nothing ticked = all) */
+function multiHas(id, dept) { const m = multi[id]; return !m || !m.selected.size || m.selected.has(dept); }
+document.addEventListener('click', e => {   // close open pickers when clicking elsewhere
+  document.querySelectorAll('.multi details[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; });
+});
+
+/* ================= MASTER PAGE ================= */
+async function loadMaster() {
+  const res = await api('getMaster');
+  state.master = res.employees;
+  renderMaster();
+}
+function renderMaster() {
+  const list = state.master || [];
+  makeMulti('mstDeptMulti', list.map(e => e.dept), renderMasterRows);
+  renderMasterRows();
+}
+function renderMasterRows() {
+  const list = state.master || [];
+  const q = $('mstSearch').value.trim().toLowerCase();
+  const t = $('mstType').value, st = $('mstStatus').value, inc = $('mstIncentive').value;
+  const rows = list.filter(e => multiHas('mstDeptMulti', e.dept) && (!t || e.bankType === t) && (!st || e.status === st) &&
+    (!inc || e.incentive === inc) &&
+    (!q || (e.code + ' ' + e.oldCode + ' ' + e.name + ' ' + e.designation).toLowerCase().includes(q)));
+  $('mstCount').textContent = `${rows.length} of ${list.length} employees`;
+  if (!list.length) { $('masterTable').innerHTML = '<tr><td class="muted">No employees yet. Click “Add employee”, or import your wages sheet in Upload.</td></tr>'; return; }
+  let last = null;
+  $('masterTable').innerHTML = `<thead><tr><th>Emp Code</th><th>Old Code</th><th>Name</th><th>Designation</th><th>DOJ</th>
+      <th>Bank Type</th><th class="num">Monthly Salary</th><th class="num">Form 12 Salary</th><th>Incentive</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows.map(e => {
+      let h = '';
+      if (e.dept !== last) { last = e.dept; h = `<tr class="dept-row"><td colspan="11">${esc(e.dept)} · ${rows.filter(x => x.dept === e.dept).length}</td></tr>`; }
+      return h + `<tr class="${e.status === 'Inactive' ? 'row-off' : ''}"><td><b>${esc(e.code)}</b></td><td>${esc(e.oldCode)}</td>
+        <td>${esc(e.name)}</td><td>${esc(e.designation)}</td><td>${esc(e.doj)}</td>
+        <td><span class="tag ${e.bankType === 'Cash' ? 'cash' : ''}">${esc(e.bankType)}</span></td>
+        <td class="num">${rs(e.salary)}</td><td class="num">${e.f12Salary ? rs(e.f12Salary) : '—'}</td>
+        <td>${e.incentive === 'Yes' ? 'Yes' : '<span class="muted">No</span>'}</td>
+        <td>${e.status === 'Active' ? 'Active' : '<span class="neg">Inactive</span>'}</td>
+        <td><button class="btn small" data-edit="${esc(e.code)}">Edit</button></td></tr>`;
+    }).join('')}</tbody>`;
+}
+function openEmployee(code) {
+  const e = code ? (state.master || []).find(x => x.code === code) : null;
+  const f = $('empForm');
+  f.reset();
+  f.dataset.original = e ? e.code : '';
+  $('empTitle').textContent = e ? `Edit ${e.name}` : 'Add new employee';
+  $('empError').textContent = '';
+  const depts = [...new Set((state.master || []).map(x => x.dept))].sort();
+  $('empDeptList').innerHTML = depts.map(d => `<option value="${esc(d)}">`).join('');
+  const desig = [...new Set((state.master || []).map(x => x.designation).filter(Boolean))].sort();
+  $('empDesigList').innerHTML = desig.map(d => `<option value="${esc(d)}">`).join('');
+  const set = (k, v) => { f.elements[k].value = v == null ? '' : v; };
+  if (e) Object.keys(e).forEach(k => { if (f.elements[k]) set(k, e[k]); });
+  else { set('bankType', 'Form 12'); set('incentive', 'Yes'); set('status', 'Active'); }
+  onEmpTypeChange();
+  $('empModal').hidden = false;
+  f.elements.code.focus();
+}
+function onEmpTypeChange() {
+  const f = $('empForm');
+  const isF12 = f.elements.bankType.value === 'Form 12';
+  f.elements.f12Salary.disabled = !isF12;
+  f.elements.f12Salary.required = isF12;
+  if (!isF12) f.elements.f12Salary.value = '';
+}
+async function onEmpSave(ev) {
+  ev.preventDefault();
+  const f = $('empForm');
+  const emp = {};
+  ['code', 'oldCode', 'name', 'dept', 'designation', 'doj', 'bankType', 'salary', 'f12Salary', 'incentive', 'status']
+    .forEach(k => { emp[k] = f.elements[k].value.trim(); });
+  $('empError').textContent = '';
+  busy(true, 'Saving employee…');
+  try {
+    const res = await api('saveEmployee', { employee: emp, originalCode: f.dataset.original || '' });
+    state.master = res.employees;
+    state.inputs = null;
+    $('empModal').hidden = true;
+    renderMaster();
+    toast(`${res.saved} saved. Click Recalculate to update this month's payroll.`);
+  } catch (err) { $('empError').textContent = err.message; }
+  finally { busy(false); }
+}
+
+/* ================= ADVANCE PAGE ================= */
+function advChoice() {
+  const t = document.querySelector('input[name="advType"]:checked');
+  return { month: $('advMonth').value, type: t ? t.value : '' };
+}
+async function onAdvChoice() {
+  const { month, type } = advChoice();
+  $('advMonthErr').hidden = !!month;
+  $('advTypeErr').hidden = !!type;
+  const ready = !!(month && type);
+  $('advBody').hidden = !ready;
+  if (!ready) return;
+  await run('Loading advances…', async () => {
+    if (!state.master) state.master = (await api('getMaster')).employees;
+    const res = await api('getAdvances', { month, sheetType: type });
+    state.adv = { month, type, saved: {} };
+    res.rows.forEach(r => { state.adv.saved[r.code] = r.amount; });
+    $('advTitle').textContent = `${type} Advance Sheet — ${monthLabel(month)}`;
+    renderAdvance();
+  });
+}
+function renderAdvance() {
+  const list = (state.master || []).filter(e => e.status === 'Active' || state.adv.saved[e.code]);
+  makeMulti('advDeptMulti', list.map(e => e.dept), filterAdvance);
+  let last = null;
+  $('advTable').innerHTML = `<thead><tr><th style="width:44px"></th><th>Emp Code</th><th>Name</th><th>Designation</th>
+      <th class="num">Monthly Salary</th><th class="num">Advance ₹</th></tr></thead>
+    <tbody>${list.map(e => {
+      let h = '';
+      if (e.dept !== last) {
+        last = e.dept;
+        h = `<tr class="dept-row" data-dept-head="${esc(e.dept)}"><td><input type="checkbox" class="adv-all" data-dept="${esc(e.dept)}" title="Select whole department"></td>
+          <td colspan="5">${esc(e.dept)} · ${list.filter(x => x.dept === e.dept).length} employees</td></tr>`;
+      }
+      const amt = state.adv.saved[e.code];
+      return h + `<tr data-code="${esc(e.code)}" data-dept="${esc(e.dept)}" class="${amt ? 'picked' : ''}"
+          data-search="${esc((e.code + ' ' + e.name + ' ' + e.designation).toLowerCase())}">
+        <td><input type="checkbox" class="adv-pick" ${amt ? 'checked' : ''}></td>
+        <td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.designation)}</td><td class="num">${rs(e.salary)}</td>
+        <td class="num"><input type="number" class="adv-amt" min="1" step="1" inputmode="numeric" value="${amt || ''}" ${amt ? '' : 'disabled'} placeholder="₹"></td></tr>`;
+    }).join('')}</tbody>`;
+  filterAdvance();
+  advTotals();
+}
+function filterAdvance() {
+  const q = $('advSearch').value.trim().toLowerCase(), onlySel = $('advOnlySel').checked;
+  const shown = {};
+  document.querySelectorAll('#advTable tbody tr[data-code]').forEach(tr => {
+    const sel = tr.querySelector('.adv-pick').checked;
+    tr.hidden = !(multiHas('advDeptMulti', tr.dataset.dept) && (!q || tr.dataset.search.includes(q)) && (!onlySel || sel));
+    if (!tr.hidden) shown[tr.dataset.dept] = true;
+  });
+  document.querySelectorAll('#advTable tbody tr[data-dept-head]').forEach(tr => { tr.hidden = !shown[tr.dataset.deptHead]; });
+}
+function pickRow(tr, on) {
+  const cb = tr.querySelector('.adv-pick'), amt = tr.querySelector('.adv-amt');
+  cb.checked = on; amt.disabled = !on; tr.classList.toggle('picked', on);
+  if (!on) { amt.value = ''; amt.classList.remove('err'); }
+}
+function onAdvTableInput(e) {
+  const t = e.target;
+  if (t.classList.contains('adv-all')) {
+    document.querySelectorAll(`#advTable tbody tr[data-code][data-dept="${cssEsc(t.dataset.dept)}"]`).forEach(tr => { if (!tr.hidden) pickRow(tr, t.checked); });
+  } else if (t.classList.contains('adv-pick')) {
+    const tr = t.closest('tr'); pickRow(tr, t.checked);
+    if (t.checked) tr.querySelector('.adv-amt').focus();
+  } else if (t.classList.contains('adv-amt')) t.classList.remove('err');
+  state.advDirty = true;
+  advTotals();
+}
+function advTotals() {
+  let n = 0, total = 0;
+  document.querySelectorAll('#advTable tbody tr[data-code]').forEach(tr => {
+    if (!tr.querySelector('.adv-pick').checked) return;
+    n++; total += Math.round(Number(tr.querySelector('.adv-amt').value) || 0);
+  });
+  $('advSummary').textContent = `${n} employee${n === 1 ? '' : 's'} selected · Total ${rs(total)}`;
+}
+async function onAdvSave() {
+  const { month, type } = advChoice();
+  $('advMonthErr').hidden = !!month; $('advTypeErr').hidden = !!type;
+  if (!month || !type) return toast('Select the month and Bank / Cash Advance Sheet first.', true);
+  const rows = [], bad = [];
+  document.querySelectorAll('#advTable tbody tr[data-code]').forEach(tr => {
+    if (!tr.querySelector('.adv-pick').checked) return;
+    const inp = tr.querySelector('.adv-amt');
+    const amt = Math.round(Number(inp.value) || 0);
+    if (amt > 0) rows.push({ code: tr.dataset.code, amount: amt }); else { bad.push(tr.dataset.code); inp.classList.add('err'); }
+  });
+  if (bad.length) return toast(`Enter the advance amount for ${bad.length} selected employee(s): ${bad.slice(0, 5).join(', ')}`, true);
+  const removed = Object.keys(state.adv.saved).filter(c => !rows.some(r => r.code === c));
+  if (!confirm(`Save ${type} Advance Sheet for ${monthLabel(month)}?\n${rows.length} employees · ${rs(rows.reduce((s, r) => s + r.amount, 0))}` +
+    (removed.length ? `\n${removed.length} earlier entr${removed.length === 1 ? 'y' : 'ies'} will be removed.` : ''))) return;
+  await run('Saving advances…', async () => {
+    const res = await api('saveAdvances', { month, sheetType: type, rows });
+    state.adv.saved = {};
+    res.rows.forEach(r => { state.adv.saved[r.code] = r.amount; });
+    state.advDirty = false;
+    renderAdvance();
+    if (month === state.month) applyData(await api('getMonth', { month: state.month }));
+    toast(`Saved: ${res.rows.length} employees · ${rs(res.total)}`);
+  });
+}
+
+/* ================= FILE READING ================= */
+function readWorkbook(file) {
+  if (!window.XLSX) return Promise.reject(new Error('Excel reader did not load. Check your internet and refresh.'));
+  return new Promise((ok, fail) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      try { ok(XLSX.read(new Uint8Array(fr.result), { type: 'array', cellDates: true })); }
+      catch (err) { fail(new Error('Could not read this file: ' + err.message)); }
+    };
+    fr.onerror = () => fail(new Error('Could not read this file.'));
+    fr.readAsArrayBuffer(file);
+  });
+}
+async function readSheetRows(file) {
+  const wb = await readWorkbook(file);
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: true });
+}
+
+/* ================= SMALL HELPERS ================= */
+function monthFromDate(v) {
+  if (v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}`;
+  const m = String(v).trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  return m ? `${m[3]}-${String(m[2]).padStart(2, '0')}` : '';
+}
+function isoDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function rs(n) { const v = Math.round(Number(n) || 0); return (v < 0 ? '−₹' : '₹') + Math.abs(v).toLocaleString('en-IN'); }
+function round2(n) { return Math.round(n * 100) / 100; }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function cssEsc(s) { return window.CSS && CSS.escape ? CSS.escape(s) : String(s).replace(/"/g, '\\"'); }
+function defaultMonth() {
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+function monthLabel(m) {
+  if (!m) return '';
+  const [y, mo] = m.split('-').map(Number);
+  return new Date(y, mo - 1, 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+}
+function busy(on, text) { $('loader').hidden = !on; if (text) $('loaderText').textContent = text; }
+let toastTimer;
+function toast(msg, isError) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, isError ? 5000 : 2500);
+}
+function store(op, key, val) {
+  try {
+    if (op === 'get') return sessionStorage.getItem(key);
+    if (op === 'set') sessionStorage.setItem(key, val);
+    if (op === 'remove') sessionStorage.removeItem(key);
+  } catch (e) { /* storage blocked */ }
+  return null;
+}
+</script>
+</body>
+</html>
