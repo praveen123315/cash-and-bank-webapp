@@ -593,6 +593,13 @@ h2.inline { margin: 0 0 4px; }
           <button class="btn markPaidBtn" data-st="Pending" title="Marks every employee currently shown (after filters) as Pending">Mark shown as Pending</button>
           <button id="exportPayrollBtn" class="btn">Export full payroll to Excel</button>
         </div>
+        <div class="toolbar" style="margin-top:-4px">
+          <b class="small">Attendance list for department heads</b>
+          <span class="muted small">(no salary · uses the Department filter above; all departments if none chosen)</span>
+          <button class="btn attRepBtn" data-k="pdf">Download PDF</button>
+          <button class="btn attRepBtn" data-k="word">Download Word</button>
+          <button class="btn attRepBtn" data-k="excel">Download Excel</button>
+        </div>
         <div class="table-wrap tall"><table id="payrollTable" class="grid"></table></div>
         <p class="muted small">Click a name to see the full working. <span class="neg">Red</span> = cash would be
           negative: shown as ₹0 and the shortfall is carried to next month as advance.</p>
@@ -666,7 +673,7 @@ h2.inline { margin: 0 0 4px; }
 const COMPANY_NAME = 'Surface Paints Private Limited';
 // ▼▼ PASTE YOUR APPS SCRIPT WEB APP URL HERE (Deploy → New deployment → Web app → copy URL ending in /exec) ▼▼
 const API_URL = 'https://script.google.com/macros/s/AKfycbwfbX5osErb1Fvwst7ZS9tB2YsvcV3wNqr0VLLRRhLVG_3ALNZfVJNXqv_z4lS36-WJjw/exec';
-const NEEDS_VERSION = '2026-10-30d';
+const NEEDS_VERSION = '2026-10-30e';
 const FULL_BANK = 'Form 12 Worker Bank';
 const isF12 = t => t === 'Form 12' || t === FULL_BANK;
 const typeLabel = t => t === FULL_BANK ? 'Form 12 – Worker (Incentive Bank)' : t;   // must match CODE_VERSION in Code.gs
@@ -756,6 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('printBtn').addEventListener('click', () => { renderCash(); window.print(); });
   $('excelBtn').addEventListener('click', exportCashSheet);
   $('exportPayrollBtn').addEventListener('click', exportPayroll);
+  document.querySelectorAll('.attRepBtn').forEach(b => b.addEventListener('click', () => attendanceReport(b.dataset.k)));
   $('detailClose').addEventListener('click', () => { $('detailModal').hidden = true; });
   $('detailModal').addEventListener('click', e => { if (e.target.id === 'detailModal') $('detailModal').hidden = true; });
 
@@ -1238,6 +1246,120 @@ function exportCashSheet() {
   rows.forEach((r, i) => data.push([i + 1, r.code, r.name, r.dept, r.cashSal, r.cashOT, r.total, r.status, '']));
   data.push(['', '', '', 'TOTAL', sum(rows, 'cashSal'), sum(rows, 'cashOT'), sum(rows, 'total'), '', '']);
   downloadSheet(data, `Cash_Sheet_${state.month}`, [6, 10, 28, 14, 12, 12, 12, 10, 24]);
+}
+
+/* ================= DEPARTMENT-WISE ATTENDANCE LIST (for department heads — no salary) ================= */
+async function attendanceReport(kind) {
+  const d = $('deptFilter').value;
+  let rows = state.rows.filter(r => !d || r.dept === d);
+  if (!rows.length) return toast('No employees to list for this month.', true);
+  if (!state.master) { try { state.master = (await api('getMaster')).employees; } catch (e) { /* designation is optional */ } }
+  const desig = {}; (state.master || []).forEach(e => { desig[e.code] = e.designation || ''; });
+  const f2 = n => Math.round((Number(n) || 0) * 100) / 100;
+  const groups = [];
+  rows.slice().sort((a, b) => a.dept.localeCompare(b.dept) || a.code.localeCompare(b.code, undefined, { numeric: true })).forEach(r => {
+    let g = groups.find(x => x.name === r.dept); if (!g) groups.push(g = { name: r.dept, rows: [] });
+    g.rows.push({ code: r.code, name: r.name, desig: desig[r.code] || '', days: f2(r.payable), ot: f2(r.otHours),
+                  food: Math.round(r.fooding || 0), adv: Math.round(r.advMonth || 0) });
+  });
+  const sum = (list, k) => f2(list.reduce((s, x) => s + x[k], 0));
+  const all = groups.flatMap(g => g.rows);
+  const T = list => ({ n: list.length, days: sum(list, 'days'), ot: sum(list, 'ot'), food: sum(list, 'food'), adv: sum(list, 'adv') });
+  const grand = T(all);
+  const title = `Department-wise Attendance List - ${monthLabel(state.month)}`;
+  const fileBase = `Attendance_List_${state.month}${d ? '_' + d.replace(/\W+/g, '_') : ''}`;
+  const printed = new Date().toLocaleString('en-IN');
+  const note = 'Final attendance as per HR (paid days incl. holiday, leave and Sunday/off). For verification and approval only - no salary shown.';
+  const H = ['S.No', 'Emp Code', 'Name', 'Designation', 'Final Attendance (days)', 'Total OT (hours)', 'Food Allowance (Rs.)', 'Advance (Rs.)', 'Remarks'];
+
+  if (kind === 'excel') {
+    const data = [[COMPANY_NAME], [title], [note], []];
+    groups.forEach(g => {
+      data.push([g.name + ' - ' + g.rows.length + ' employees']); data.push(H);
+      g.rows.forEach((x, i) => data.push([i + 1, x.code, x.name, x.desig, x.days, x.ot, x.food, x.adv, '']));
+      const t = T(g.rows); data.push(['', '', '', 'Department total', t.days, t.ot, t.food, t.adv, '']); data.push([]);
+    });
+    data.push(['', '', '', 'GRAND TOTAL (' + grand.n + ' employees)', grand.days, grand.ot, grand.food, grand.adv, '']);
+    return downloadSheet(data, fileBase, [7, 12, 28, 22, 22, 16, 20, 14, 28]);
+  }
+  if (kind === 'pdf' && window.jspdf && window.jspdf.jsPDF) {
+    const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
+    const W = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
+    const sign = (y) => { doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+      [['Prepared by (HR)', 14], ['Verified by Department Head', W / 2 - 25], ['Approved by', W - 64]].forEach(([t, x]) => { doc.line(x, y, x + 50, y); doc.text(t, x + 25, y + 5, { align: 'center' }); }); };
+    groups.forEach((g, gi) => {
+      if (gi) doc.addPage();
+      try { doc.addImage(LOGO, 'PNG', 14, 8, 30, 15); } catch (e) { /* logo optional */ }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.text(COMPANY_NAME, W - 14, 14, { align: 'right' });
+      doc.setFontSize(11); doc.text(title, W - 14, 20, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.text(note, W - 14, 25, { align: 'right' });
+      const t = T(g.rows);
+      doc.autoTable({
+        startY: 30, margin: { left: 14, right: 14, bottom: 30 },
+        head: [[{ content: `Department: ${g.name}  -  ${g.rows.length} employee${g.rows.length === 1 ? '' : 's'}`, colSpan: 9, styles: { fillColor: [63, 64, 149], textColor: 255, halign: 'left' } }], H],
+        body: g.rows.map((x, i) => [i + 1, x.code, x.name, x.desig, x.days, x.ot, x.food, x.adv, '']),
+        foot: [[{ content: 'Department total', colSpan: 4, styles: { halign: 'right' } }, t.days, t.ot, t.food, t.adv, '']],
+        showFoot: 'lastPage', theme: 'grid',
+        styles: { fontSize: 9, cellPadding: 2, minCellHeight: 7.5, valign: 'middle', lineColor: [120, 120, 120], lineWidth: 0.1 },
+        headStyles: { fillColor: [230, 234, 242], textColor: 20, fontStyle: 'bold' },
+        footStyles: { fillColor: [245, 246, 250], textColor: 20, fontStyle: 'bold', halign: 'right' },
+        columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 22 }, 4: { cellWidth: 28, halign: 'right' }, 5: { cellWidth: 24, halign: 'right' }, 6: { cellWidth: 28, halign: 'right' }, 7: { cellWidth: 24, halign: 'right' } },
+        didDrawPage: () => { doc.setFontSize(8); doc.setTextColor(90); doc.text(`Printed ${printed}`, 14, PH - 6); doc.setTextColor(0); }
+      });
+      let y = doc.lastAutoTable.finalY + 14; if (y > PH - 22) { doc.addPage(); y = 30; }
+      sign(y);
+    });
+    // summary page: overall totals
+    doc.addPage();
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.text(COMPANY_NAME, 14, 16);
+    doc.setFontSize(11); doc.text('Overall summary - ' + monthLabel(state.month), 14, 23);
+    doc.autoTable({
+      startY: 30, margin: { left: 14, right: 14 },
+      head: [['Department', 'Employees', 'Final Attendance (days)', 'Total OT (hours)', 'Food Allowance (Rs.)', 'Advance (Rs.)']],
+      body: groups.map(g => { const t = T(g.rows); return [g.name, t.n, t.days, t.ot, t.food, t.adv]; }),
+      foot: [['GRAND TOTAL', grand.n, grand.days, grand.ot, grand.food, grand.adv].map((v, i) => i ? { content: String(v), styles: { halign: 'right' } } : v)],
+      theme: 'grid', styles: { fontSize: 10, cellPadding: 2.5, lineColor: [120, 120, 120], lineWidth: 0.1 },
+      headStyles: { fillColor: [230, 234, 242], textColor: 20, fontStyle: 'bold' }, footStyles: { fillColor: [245, 246, 250], textColor: 20, fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }
+    });
+    sign(doc.lastAutoTable.finalY + 24);
+    const pages = doc.getNumberOfPages();
+    for (let q = 1; q <= pages; q++) { doc.setPage(q); doc.setFontSize(8); doc.text(`Page ${q} of ${pages}`, W - 14, PH - 6, { align: 'right' }); }
+    doc.save(fileBase + '.pdf'); toast('PDF downloaded'); return;
+  }
+  // Word (or fallback when the PDF library could not load)
+  const css = `body{font-family:Arial,sans-serif;font-size:10pt}h1{font-size:15pt;margin:0}h2{font-size:12pt;margin:3pt 0}
+    table{width:100%;border-collapse:collapse;margin:6pt 0 10pt}th,td{border:1px solid #555;padding:4pt;font-size:9.5pt;text-align:left}
+    th{background:#e6eaf2}td.n{text-align:right}tr.dh td{background:#3F4095;color:#fff;font-weight:bold}tfoot td{font-weight:bold}
+    @page{size:A4 landscape;margin:12mm}.pb{page-break-before:always}`;
+  const sig = `<table style="margin-top:30pt;border:0"><tr><td style="border:0;border-top:1px solid #000;text-align:center">Prepared by (HR)</td><td style="border:0"></td>
+    <td style="border:0;border-top:1px solid #000;text-align:center">Verified by Department Head</td><td style="border:0"></td>
+    <td style="border:0;border-top:1px solid #000;text-align:center">Approved by</td></tr></table>`;
+  const body = groups.map((g, gi) => { const t = T(g.rows); return `<div class="${gi ? 'pb' : ''}"><h1>${esc(COMPANY_NAME)}</h1><h2>${esc(title)}</h2><p>${esc(note)}</p>
+    <table><thead><tr class="dh"><td colspan="9">Department: ${esc(g.name)} · ${g.rows.length} employees</td></tr>
+    <tr>${H.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+    <tbody>${g.rows.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.desig)}</td><td class="n">${x.days}</td><td class="n">${x.ot}</td><td class="n">${x.food}</td><td class="n">${x.adv}</td><td style="width:16%"></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="4" style="text-align:right">Department total</td><td class="n">${t.days}</td><td class="n">${t.ot}</td><td class="n">${t.food}</td><td class="n">${t.adv}</td><td></td></tr></tfoot></table>${sig}</div>`; }).join('') +
+    `<div class="pb"><h1>${esc(COMPANY_NAME)}</h1><h2>Overall summary · ${esc(monthLabel(state.month))}</h2>
+    <table><thead><tr><th>Department</th><th>Employees</th><th>Final Attendance (days)</th><th>Total OT (hours)</th><th>Food Allowance ₹</th><th>Advance ₹</th></tr></thead>
+    <tbody>${groups.map(g => { const t = T(g.rows); return `<tr><td>${esc(g.name)}</td><td class="n">${t.n}</td><td class="n">${t.days}</td><td class="n">${t.ot}</td><td class="n">${t.food}</td><td class="n">${t.adv}</td></tr>`; }).join('')}</tbody>
+    <tfoot><tr><td>GRAND TOTAL</td><td class="n">${grand.n}</td><td class="n">${grand.days}</td><td class="n">${grand.ot}</td><td class="n">${grand.food}</td><td class="n">${grand.adv}</td></tr></tfoot></table>${sig}</div>`;
+  if (kind === 'word') {
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="utf-8"><title>${esc(title)}</title><style>${css}</style></head><body>${body}</body></html>`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\ufeff', html], { type: 'application/msword' }));
+    a.download = fileBase + '.doc'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000); toast('Word file downloaded'); return;
+  }
+  toast('PDF library not loaded — use “Save as PDF” in the print window.');
+  const old = document.getElementById('advFrame'); if (old) old.remove();
+  const frame = document.createElement('iframe');
+  frame.id = 'advFrame'; frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+  document.body.appendChild(frame);
+  const dd = frame.contentWindow.document;
+  dd.open(); dd.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(fileBase)}</title><style>${css}</style></head><body>${body}</body></html>`); dd.close();
+  setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); }, 400);
 }
 
 function exportPayroll() {
