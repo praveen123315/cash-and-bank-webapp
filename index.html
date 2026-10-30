@@ -138,6 +138,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 16px; }
 .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table.grid { width: 100%; border-collapse: collapse; font-size: 14px; }
 .grid th, .grid td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.grid th.bankcol { white-space: normal; min-width: 132px; line-height: 1.25; }
 .grid th { background: #f7f9fc; font-weight: 600; font-size: 13px; color: #344054; position: sticky; top: 0; }
 .grid td.num, .grid th.num { text-align: right; }
 .grid tfoot td { font-weight: 700; background: #f7f9fc; }
@@ -672,8 +673,8 @@ h2.inline { margin: 0 0 4px; }
 /* ===== SETTINGS ===== */
 const COMPANY_NAME = 'Surface Paints Private Limited';
 // ▼▼ PASTE YOUR APPS SCRIPT WEB APP URL HERE (Deploy → New deployment → Web app → copy URL ending in /exec) ▼▼
-const API_URL = 'https://script.google.com/macros/s/AKfycbwfbX5osErb1Fvwst7ZS9tB2YsvcV3wNqr0VLLRRhLVG_3ALNZfVJNXqv_z4lS36-WJjw/exec';
-const NEEDS_VERSION = '2026-10-30e';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxqdJfxQG462y04Jroueb7VDvmOcIhszpp9ckwqAvrZOPPH9FSoYPkV6DAZ5Jk1_3EAzg/exec';
+const NEEDS_VERSION = '2026-10-30g';
 const FULL_BANK = 'Form 12 Worker Bank';
 const isF12 = t => t === 'Form 12' || t === FULL_BANK;
 const typeLabel = t => t === FULL_BANK ? 'Form 12 – Worker (Incentive Bank)' : t;   // must match CODE_VERSION in Code.gs
@@ -1065,6 +1066,13 @@ function dedParts(r) {
 }
 function f12Earned(r) { return isF12(r.bankType) && r.f12Salary ? Math.round(r.f12Salary / 30 * (Number(r.f12Days) || 0)) : 0; }
 
+/** Bank payment split: salary part (Form 12 / staff salary) and incentive part (OT + Fooding + Incentive, Form 12 – Worker only). */
+function bankSalary(r) {
+  if (r.bankType === FULL_BANK) return Math.max(0, Math.min(r.bank, f12Earned(r) - r.pf - r.esic));
+  return Math.max(0, r.bank);
+}
+function bankIncentive(r) { return r.bankType === FULL_BANK ? Math.max(0, r.bank - bankSalary(r)) : 0; }
+
 function renderPayroll() {
   const rows = filteredRows();
   $('payrollCount').textContent = `${rows.length} of ${state.rows.length} employees`;
@@ -1077,13 +1085,13 @@ function renderPayroll() {
     `<thead>
       <tr class="grp-head"><th colspan="3" class="fz"></th><th colspan="8" class="grp">Earnings — Monthly Salary basis</th>
         <th colspan="2" class="grp">Deductions</th><th colspan="4" class="grp">Form 12 Salary basis → bank</th>
-        <th colspan="5" class="grp">Payment</th></tr>
+        <th colspan="6" class="grp">Payment</th></tr>
       <tr><th class="fz fz1">Code</th><th class="fz fz2">Name</th><th class="fz fz3">Dept</th>
       <th class="num grp-start">Monthly salary</th><th class="num">Days</th><th class="num">Earning</th><th class="num">OT hrs</th>
       <th class="num">OT pay</th><th class="num">Fooding</th><th class="num">Incentive</th><th class="num">Gross</th>
       <th class="num grp-start">Advance</th><th class="num">Other ded.</th>
       <th class="num grp-start">F12 salary · days</th><th class="num">F12 earned</th><th class="num">PF 12%</th><th class="num">ESIC 0.75%</th>
-      <th class="num grp-start">Total payable</th><th class="num">Bank</th><th class="num">Cash</th><th class="num">of which OT</th><th>Status</th></tr></thead>
+      <th class="num grp-start">Total payable</th><th class="num bankcol">Final To Pay – Form 12 Salary (Bank)</th><th class="num bankcol">Final To Pay – Incentive (Bank)</th><th class="num">Cash</th><th class="num">of which OT</th><th>Status</th></tr></thead>
     <tbody>${rows.map(r => {
       const red = r.carry > 0, f12 = isF12(r.bankType);
       const tag = r.bankType === FULL_BANK ? '<span class="tag">F12 Worker · all bank</span>' : f12 ? `<span class="tag">Form 12</span>`
@@ -1102,10 +1110,11 @@ function renderPayroll() {
         <td class="num">${v(r.incentive)}</td><td class="num"><b>${rs(r.gross)}</b></td>
         <td class="num grp-start">${adv(r) ? `${rs(adv(r))}${advSub.length > 1 || r.advBank || r.advIn ? `<span class="sub">${advSub.join(' · ')}</span>` : ''}` : '—'}</td>
         <td class="num">${ded5(r) ? `${rs(ded5(r))}<span class="sub">${dedSub}</span>` : '—'}</td>
-        <td class="num grp-start">${f12 ? `${rs(r.f12Salary)} · ${r.f12Days}d` : '—'}</td><td class="num">${f12 ? rs(f12Earned(r)) : '—'}</td>
+        <td class="num grp-start">${f12 ? `${rs(r.f12Salary)} · ${round2(Number(r.f12Days) || 0)}d` : '—'}</td><td class="num">${f12 ? rs(f12Earned(r)) : '—'}</td>
         <td class="num">${v(r.pf)}</td><td class="num">${v(r.esic)}</td>
         <td class="num grp-start">${rs(r.balance)}</td>
-        <td class="num">${v(r.bank)}</td>
+        <td class="num">${r.bankType === 'Cash' ? '—' : `<b>${rs(bankSalary(r))}</b>`}</td>
+        <td class="num">${r.bankType === FULL_BANK ? `<b>${rs(bankIncentive(r))}</b>` : '—'}</td>
         <td class="num ${red ? 'neg' : ''}"><b>${rs(r.total)}</b>${red ? `<span class="sub neg">${rs(r.carry)} carried fwd</span>` : ''}</td>
         <td class="num">${v(r.cashOT)}</td>
         <td><button class="status-btn ${r.status === 'Paid' ? 'paid' : 'pending'}" data-code="${esc(r.code)}"
@@ -1116,7 +1125,7 @@ function renderPayroll() {
       <td class="num">${rs(tot('fooding'))}</td><td class="num">${rs(tot('incentive'))}</td><td class="num">${rs(tot('gross'))}</td>
       <td class="num grp-start">${rs(tot(adv))}</td><td class="num">${rs(tot(ded5))}</td>
       <td class="num grp-start"></td><td class="num">${rs(tot(f12Earned))}</td><td class="num">${rs(tot('pf'))}</td><td class="num">${rs(tot('esic'))}</td>
-      <td class="num grp-start">${rs(tot('balance'))}</td><td class="num">${rs(tot('bank'))}</td>
+      <td class="num grp-start">${rs(tot('balance'))}</td><td class="num">${rs(tot(bankSalary))}</td><td class="num">${rs(tot(bankIncentive))}</td>
       <td class="num">${rs(tot('total'))}</td><td class="num">${rs(tot('cashOT'))}</td><td></td></tr></tfoot>`;
 }
 
@@ -1193,11 +1202,13 @@ function showDetail(code) {
       ${line('Other deductions', rs(other), 'sum')}
       ${f12 ? `
       ${head(`B · Form 12 — Form 12 Salary column ${rs(r.f12Salary)}`)}
-      ${line('Form 12 days', r.f12Days)}
-      ${line('Form 12 earned', rs(earned), 'sum', `${rs(r.f12Salary)} ÷ 30 × ${r.f12Days} days`)}
+      ${line('Form 12 days', round2(Number(r.f12Days) || 0), '', fullBank ? `Adjusted automatically: actual earning ${rs(r.earning)} × 30 ÷ Form 12 salary ${rs(r.f12Salary)} (max 30 days), so Form 12 shows the worker's actual salary` : '')}
+      ${line('Form 12 earned', rs(earned), 'sum', `${rs(r.f12Salary)} ÷ 30 × ${round2(Number(r.f12Days) || 0)} days`)}
       ${minus('PF 12%', r.pf, `12% × ${rs(earned)}`)}
       ${minus('ESIC 0.75%', r.esic, `0.75% × ${rs(earned)}`)}
-      ${fullBank ? line('Paid to bank', rs(r.bank), 'sum', 'Form 12 – Worker (Incentive Bank): the whole total payable goes to bank, no cash')
+      ${fullBank ? line('Final To Pay – Form 12 Salary (Bank)', rs(bankSalary(r)), '', `${rs(earned)} − PF ${rs(r.pf)} − ESIC ${rs(r.esic)}`) +
+          line('Final To Pay – Incentive (Bank)', rs(bankIncentive(r)), '', `This is the part that other workers get in cash. OT ${rs(r.otPay)} + Fooding ${rs(r.fooding)} + Incentive ${rs(r.incentive)}, less other deductions ${rs(other)}, plus any actual salary above Form 12 earned`) +
+          line('Total paid to bank (both parts)', rs(r.bank), 'sum', 'Form 12 – Worker (Incentive Bank): both payments go to bank, no cash')
         : line('Paid to bank', rs(r.bank), 'sum', `${rs(earned)} − PF ${rs(r.pf)} − ESIC ${rs(r.esic)}`)}` : r.bankType === 'Staff' ? `
       ${head('B · Bank — staff salary goes to bank')}
       ${line('Paid to bank', rs(r.bank), 'sum', 'Total payable − (OT pay + Fooding + Incentive)')}` : `
@@ -1363,7 +1374,7 @@ async function attendanceReport(kind) {
 }
 
 function exportPayroll() {
-  const rows = filteredRows().map(r => Object.assign({}, r, { f12Earned: f12Earned(r), otherDed: otherDed(r), totalDed: deductions(r) }));
+  const rows = filteredRows().map(r => Object.assign({}, r, { f12Earned: f12Earned(r), otherDed: otherDed(r), totalDed: deductions(r), bankSalary: bankSalary(r), bankIncentive: bankIncentive(r), f12Days: Math.round((Number(r.f12Days) || 0) * 100) / 100 }));
   if (!rows.length) return toast('Nothing to export', true);
   const cols = [['code', 'Emp Code'], ['name', 'Name'], ['dept', 'Department'], ['bankType', 'Bank Type'], ['salary', 'Salary'],
     ['present', 'Attendance'], ['holiday', 'Holiday'], ['leave', 'Leave'], ['sunday', 'Sunday/Off'], ['payable', 'Total Days'],
@@ -1371,7 +1382,7 @@ function exportPayroll() {
     ['gross', 'Salary (Gross)'], ['extra', 'Extra Deduction'], ['tds', 'TDS'], ['lateMarks', 'Late Marks'], ['late', 'Late Deduction'], ['loan', 'Loan'],
     ['nats', 'NATS'], ['advBank', 'Bank Advance'], ['advCash', 'Cash Advance'], ['advMonth', 'Advance Total'], ['advIn', 'Advance Carried In'], ['esic', 'ESIC'], ['pf', 'PF'],
     ['otherDed', 'Other Deductions'], ['totalDed', 'Total Deductions'], ['balance', 'Total Payable'],
-    ['f12Salary', 'Form 12 Salary'], ['f12Days', 'Form 12 Days'], ['f12Earned', 'Form 12 Earned'], ['bank', 'Bank Amount'], ['net', 'Net to Pay'],
+    ['f12Salary', 'Form 12 Salary'], ['f12Days', 'Form 12 Days'], ['f12Earned', 'Form 12 Earned'], ['bankSalary', 'Final To Pay - Form 12 Salary (Bank)'], ['bankIncentive', 'Final To Pay - Incentive (Bank)'], ['bank', 'Total Bank Amount'], ['net', 'Net to Pay'],
     ['cashSal', 'Cash Salary'], ['cashOT', 'Cash OT'], ['total', 'Total Cash'], ['carry', 'Carry Forward'],
     ['status', 'Status'], ['paidOn', 'Paid On'], ['remarks', 'Remarks']];
   const data = [cols.map(c => c[1])];
@@ -1653,15 +1664,15 @@ async function loadInputs() {
 /** Value shown in a box: saved value → else machine value / suggested Form 12 days → else blank. */
 function shownValue(e, c) {
   const saved = e.inputs ? e.inputs[c.k] : '';
-  if (saved !== '' && saved != null) return saved;
-  if (c.k === 'f12Days') return e.suggestedF12;
+  if (saved !== '' && saved != null) return c.k === 'f12Days' ? round2(Number(saved)) : saved;
+  if (c.k === 'f12Days') return e.suggestedF12 === '' ? '' : round2(Number(e.suggestedF12));
   if (c.k === 'incentive') return e.suggestedIncentive || '';
   if (c.machine && e.machine) return e.machine[c.k];
   return '';
 }
 /** Machine / suggested value (what the app would use anyway). */
 function baseValue(e, c) {
-  if (c.k === 'f12Days') return e.suggestedF12;
+  if (c.k === 'f12Days') return e.suggestedF12 === '' ? '' : round2(Number(e.suggestedF12));
   if (c.k === 'incentive') return e.suggestedIncentive || '';
   if (c.machine && e.machine) return e.machine[c.k];
   return '';
