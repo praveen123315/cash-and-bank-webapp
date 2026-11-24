@@ -347,6 +347,84 @@ h2.inline { margin: 0 0 4px; }
 .center { text-align: center; }
 .print-logo { display: none; }
 @media print { .print-logo { display: block; height: 48px; width: auto; margin-bottom: 6px; } }
+
+/* ===================== v3 · UI refresh (keeps the Surface Paints branding above) ===================== */
+:root {
+  --bg: #f2f3f8;
+  --line: #e3e5ee;
+  --line-2: #ccd0e0;
+  --text: #1a1c2b;
+  --muted: #63667d;
+  --accent: #eeeff9;
+  --shadow-1: 0 1px 2px rgba(25, 26, 50, .06);
+  --shadow-2: 0 4px 16px rgba(25, 26, 50, .09);
+}
+body { -webkit-font-smoothing: antialiased; }
+main { max-width: 1600px; }
+.panel { box-shadow: var(--shadow-1); }
+h2 { letter-spacing: -.01em; }
+
+.topbar { box-shadow: 0 1px 0 rgba(25,26,50,.04); }
+.brand { font-size: 17px; }
+.tabs { box-shadow: var(--shadow-1); position: sticky; top: 0; z-index: 20; }
+.tab { transition: color .12s ease, background .12s ease; border-radius: 6px 6px 0 0; }
+.tab:hover { color: var(--primary); background: var(--accent); }
+
+.btn { transition: border-color .12s ease, background .12s ease, box-shadow .12s ease; box-shadow: var(--shadow-1); font-weight: 500; }
+.btn.primary { box-shadow: 0 1px 2px rgba(63,64,149,.32); }
+.btn.ghost { box-shadow: none; }
+.btn:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+input:focus, select:focus { border-color: var(--primary); outline: none; }
+
+.card { box-shadow: var(--shadow-1); transition: box-shadow .15s ease; }
+.card:hover { box-shadow: var(--shadow-2); }
+.card .value { letter-spacing: -.02em; }
+
+/* Figures line up in every grid */
+.grid td.num, .grid th.num, .calc td:last-child { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+.grid tbody tr:hover td, .grid tbody tr:hover td.fz { background: #f6f7fc; }
+
+/* ---------- Payroll register: every figure, nothing hidden ---------- */
+#payrollTable { font-size: 13px; }
+#payrollTable th, #payrollTable td { padding: 7px 9px; }
+#payrollTable thead tr.grp-head th {
+  position: sticky; top: 0; z-index: 5; height: 27px; padding: 4px 9px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  text-align: left; border-bottom: 1px solid var(--line);
+}
+#payrollTable thead tr.col-head th {
+  position: sticky; top: 27px; z-index: 5; background: #f6f7fb; color: #3a3d55;
+  font-size: 11.5px; font-weight: 600; line-height: 1.25; white-space: normal;
+  vertical-align: bottom; min-width: 66px; max-width: 96px;
+  border-bottom: 2px solid var(--line-2);
+}
+#payrollTable thead tr.col-head th.fz { background: #f6f7fb; z-index: 6; vertical-align: bottom; }
+#payrollTable thead tr.grp-head th.fz { background: #f6f7fb; color: #3a3d55; z-index: 6; }
+/* The group name follows you sideways, so you always know which block you are reading */
+#payrollTable thead tr.grp-head th.grp > span { position: sticky; left: 370px; display: inline-block; }
+#payrollTable tbody tr:nth-child(even) td, #payrollTable tbody tr:nth-child(even) td.fz { background: #fbfbfe; }
+#payrollTable tbody tr:hover td, #payrollTable tbody tr:hover td.fz { background: #eeeff9; }
+#payrollTable tbody tr.row-red td, #payrollTable tbody tr.row-red td.fz { background: #fff5f5; }
+#payrollTable td.strong { font-weight: 700; color: #11131f; }
+#payrollTable .z { color: #c6cada; }
+#payrollTable td.fz2 .sub { margin-top: 2px; }
+#payrollTable th.st-col, #payrollTable td.st-col { border-left: 2px solid var(--line-2); min-width: 92px; }
+#payrollTable tfoot td {
+  position: sticky; bottom: 0; z-index: 4; background: var(--accent); color: var(--primary);
+  font-weight: 700; border-top: 2px solid var(--line-2); border-bottom: 0;
+}
+#payrollTable tfoot td.fz-tot { position: sticky; left: 0; z-index: 5; background: var(--accent); text-align: left; white-space: nowrap; }
+#payrollTable tfoot td .z { color: #aeb2cc; }
+#payrollTable .gh-att  { background: #eef0f7; color: #474a68; }
+#payrollTable .gh-earn { background: #e8f6ed; color: #0c6b38; }
+#payrollTable .gh-ded  { background: #fdeef0; color: #b02a30; }
+#payrollTable .gh-bank { background: #eaecf8; color: var(--primary); }
+#payrollTable .gh-pay  { background: #fff2e4; color: #9a5214; }
+#payrollTable td.grp-start, #payrollTable th.grp-start { border-left: 2px solid var(--line-2); }
+#payrollTable .fz3 { box-shadow: 2px 0 0 var(--line-2); }
+
+#inputsTable thead th, #masterTable thead th, #advTable thead th { background: #f6f7fb; }
+@media (max-width: 900px) { #payrollTable thead tr.col-head th { min-width: 58px; } }
 </style>
   <!-- Excel reader/writer (machine .xls, wages .xlsx, exports) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1088,60 +1166,109 @@ function f12Earned(r) { return Number(r.f12Earned) || 0; }
 function bankSalary(r) { return Math.max(0, Number(r.bankSalary) || 0); }
 function bankIncentive(r) { return Math.max(0, Number(r.bankIncentive) || 0); }
 
+/* ---------- Payroll column model — every figure the engine produces, nothing hidden ---------- */
+const PAY_GROUPS = [
+  { k: 'att',  l: 'Attendance · days' },
+  { k: 'earn', l: 'Earnings ₹ · Monthly Salary basis' },
+  { k: 'ded',  l: 'Deductions ₹' },
+  { k: 'bank', l: 'Form 12 / bank basis ₹' },
+  { k: 'pay',  l: 'Payment ₹' }
+];
+const PAY_COLS = [
+  { g: 'att',  l: 'Present',            d: 1, f: r => r.present },
+  { g: 'att',  l: 'Holiday',            d: 1, f: r => r.holiday },
+  { g: 'att',  l: 'Leave',              d: 1, f: r => r.leave },
+  { g: 'att',  l: 'Sun / Off',          d: 1, f: r => r.sunday },
+  { g: 'att',  l: 'Payable days',       d: 1, b: 1, f: r => r.payable },
+  { g: 'att',  l: 'OT hours',           d: 1, f: r => r.otHours },
+  { g: 'att',  l: 'Late marks',         d: 1, f: r => r.lateMarks },
+
+  { g: 'earn', l: 'Monthly salary',     f: r => r.salary },
+  { g: 'earn', l: 'Earning',            f: r => r.earning },
+  { g: 'earn', l: 'OT pay',             f: r => r.otPay },
+  { g: 'earn', l: 'Fooding',            f: r => r.fooding },
+  { g: 'earn', l: 'Incentive',          f: r => r.incentive },
+  { g: 'earn', l: 'Gross',              b: 1, f: r => r.gross },
+
+  { g: 'ded',  l: 'Extra ded.', h: 'Extra deduction typed by HR', f: r => r.extra },
+  { g: 'ded',  l: 'TDS',                f: r => r.tds },
+  { g: 'ded',  l: 'Late ded.', h: 'Late deduction in ₹ typed by HR', f: r => r.late },
+  { g: 'ded',  l: 'Loan',               f: r => r.loan },
+  { g: 'ded',  l: 'NATS',               f: r => r.nats },
+  { g: 'ded',  l: 'Advance · bank',     f: r => r.advBank },
+  { g: 'ded',  l: 'Advance · cash',     f: r => r.advCash },
+  { g: 'ded',  l: 'Adv. carried', h: 'Shortfall carried in from last month', f: r => r.advIn },
+  { g: 'ded',  l: 'ESIC',               f: r => r.esic },
+  { g: 'ded',  l: 'PF',                 f: r => r.pf },
+  { g: 'ded',  l: 'Total deductions',   b: 1, f: r => deductions(r) },
+
+  { g: 'bank', l: 'Bank gross',         f: r => r.bankGross },
+  { g: 'bank', l: 'Form 12 days',       d: 1, f: r => r.f12Days },
+  { g: 'bank', l: 'Basic earned', h: 'The wage PF is taken on', f: r => r.basicEarned },
+  { g: 'bank', l: 'Form 12 earned',     f: r => f12Earned(r) },
+  { g: 'bank', l: 'To bank · salary',   f: r => bankSalary(r) },
+  { g: 'bank', l: 'To bank · incent.', h: 'Form 12 – Worker only: the part other workers get in cash', f: r => bankIncentive(r) },
+  { g: 'bank', l: 'Total to bank',      b: 1, f: r => r.bank },
+
+  { g: 'pay',  l: 'Balance payable',    b: 1, f: r => r.balance },
+  { g: 'pay',  l: 'Net after bank', h: 'Balance payable less the amount paid to bank', f: r => r.net },
+  { g: 'pay',  l: 'Cash salary',        f: r => r.cashSal },
+  { g: 'pay',  l: 'Cash OT',            f: r => r.cashOT },
+  { g: 'pay',  l: 'Total cash',         b: 1, f: r => r.total },
+  { g: 'pay',  l: 'Carried forward',    f: r => r.carry }
+];
+const PAY_FIRST = {};
+PAY_COLS.forEach((c, i) => { if (!(c.g in PAY_FIRST)) PAY_FIRST[c.g] = i; });
+const payEdge = i => (PAY_FIRST[PAY_COLS[i].g] === i ? ' grp-start' : '');
+
+/** One payroll figure. Zero shows as a faint dash so the real numbers stand out; negatives are red. */
+function payNum(v, isDays) {
+  const x = isDays ? round2(Number(v) || 0) : Math.round(Number(v) || 0);
+  if (!x) return '<span class="z">–</span>';
+  const s = isDays ? String(x) : Math.abs(x).toLocaleString('en-IN');
+  return x < 0 ? '<span class="neg">−' + s + '</span>' : s;
+}
+
+function typeTag(t) {
+  return t === FULL_BANK ? '<span class="tag">F12 Worker · all bank</span>'
+    : t === 'Form 12' ? '<span class="tag">Form 12</span>'
+    : t === 'Staff' ? '<span class="tag">Staff · bank</span>'
+    : t === STAFF_CASH ? '<span class="tag cash">Staff · full cash</span>'
+    : '<span class="tag cash">All cash</span>';
+}
+
 function renderPayroll() {
   const rows = filteredRows();
   $('payrollCount').textContent = `${rows.length} of ${state.rows.length} employees`;
   if (!rows.length) { $('payrollTable').innerHTML = '<tr><td class="muted">No employees to show.</td></tr>'; return; }
-  const tot = k => rows.reduce((s, r) => s + (typeof k === 'function' ? k(r) : (Number(r[k]) || 0)), 0);
-  const v = n => n ? rs(n) : '—';
-  const adv = r => r.advMonth + r.advIn;
-  const ded5 = r => r.extra + r.tds + r.late + r.loan + r.nats;
+  const tot = f => rows.reduce((s, r) => s + (Number(f(r)) || 0), 0);
+
+  const grpHead = PAY_GROUPS.map(g => {
+    const n = PAY_COLS.filter(c => c.g === g.k).length + (g.k === 'pay' ? 1 : 0);
+    return `<th colspan="${n}" class="grp gh-${g.k}"><span>${g.l}</span></th>`;
+  }).join('');
+  const colHead = PAY_COLS.map((c, i) =>
+    `<th class="num${payEdge(i)}"${c.h ? ` title="${esc(c.h)}"` : ''}>${c.l}</th>`).join('');
+
   $('payrollTable').innerHTML =
     `<thead>
-      <tr class="grp-head"><th colspan="3" class="fz"></th><th colspan="8" class="grp">Earnings — Monthly Salary basis</th>
-        <th colspan="2" class="grp">Deductions</th><th colspan="4" class="grp">Form 12 Salary basis → bank</th>
-        <th colspan="6" class="grp">Payment</th></tr>
-      <tr><th class="fz fz1">Code</th><th class="fz fz2">Name</th><th class="fz fz3">Dept</th>
-      <th class="num grp-start">Monthly salary</th><th class="num">Days</th><th class="num">Earning</th><th class="num">OT hrs</th>
-      <th class="num">OT pay</th><th class="num">Fooding</th><th class="num">Incentive</th><th class="num">Gross</th>
-      <th class="num grp-start">Advance</th><th class="num">Other ded.</th>
-      <th class="num grp-start">F12 salary · days</th><th class="num">F12 earned</th><th class="num">PF</th><th class="num">ESIC</th>
-      <th class="num grp-start">Total payable</th><th class="num bankcol">Final To Pay – Form 12 Salary (Bank)</th><th class="num bankcol">Final To Pay – Incentive (Bank)</th><th class="num">Cash</th><th class="num">of which OT</th><th>Status</th></tr></thead>
+      <tr class="grp-head"><th colspan="3" class="fz"><span>Employee</span></th>${grpHead}</tr>
+      <tr class="col-head"><th class="fz fz1">Code</th><th class="fz fz2">Name</th><th class="fz fz3">Department</th>
+        ${colHead}<th class="st-col">Status</th></tr></thead>
     <tbody>${rows.map(r => {
-      const red = r.carry > 0, f12 = isF12(r.bankType) || (r.bankType === 'Staff' && r.f12Salary > 0);
-      const tag = r.bankType === FULL_BANK ? '<span class="tag">F12 Worker · all bank</span>' : r.bankType === 'Form 12' ? `<span class="tag">Form 12</span>`
-        : r.bankType === 'Staff' ? '<span class="tag">Staff · bank</span>' : r.bankType === STAFF_CASH ? '<span class="tag cash">Staff · full cash</span>' : '<span class="tag cash">All cash</span>';
-      const warn = /suggested/i.test(r.remarks) ? ' <span class="tag warn" title="Form 12 days were suggested, not confirmed">check F12</span>' : '';
-      const advSub = [r.advBank ? 'Bank ' + inr(r.advBank) : '', r.advCash ? 'Adv ' + inr(r.advCash) : '', r.advIn ? 'Carried ' + inr(r.advIn) : '']
-        .filter(Boolean);
-      const dedSub = [['Extra', r.extra], ['TDS', r.tds], ['Late', r.late], ['Loan', r.loan], ['NATS', r.nats]]
-        .filter(x => x[1]).map(x => `${x[0]} ${inr(x[1])}`).join(' · ');
-      return `<tr class="${red ? 'row-red' : ''}">
+      const warn = /suggested/i.test(r.remarks)
+        ? ' <span class="tag warn" title="Form 12 days were suggested, not confirmed by HR">check F12</span>' : '';
+      return `<tr class="${r.carry > 0 ? 'row-red' : ''}">
         <td class="fz fz1">${esc(r.code)}</td>
-        <td class="fz fz2"><button class="name-link" data-detail="${esc(r.code)}">${esc(r.name)}</button><span class="sub">${tag}${warn}</span></td>
+        <td class="fz fz2"><button class="name-link" data-detail="${esc(r.code)}">${esc(r.name)}</button><span class="sub">${typeTag(r.bankType)}${warn}</span></td>
         <td class="fz fz3">${esc(r.dept)}</td>
-        <td class="num grp-start">${rs(r.salary)}</td><td class="num">${r.payable}</td><td class="num">${rs(r.earning)}</td>
-        <td class="num">${r.otHours || '—'}</td><td class="num">${v(r.otPay)}</td><td class="num">${v(r.fooding)}</td>
-        <td class="num">${v(r.incentive)}</td><td class="num"><b>${rs(r.gross)}</b></td>
-        <td class="num grp-start">${adv(r) ? `${rs(adv(r))}${advSub.length > 1 || r.advBank || r.advIn ? `<span class="sub">${advSub.join(' · ')}</span>` : ''}` : '—'}</td>
-        <td class="num">${ded5(r) ? `${rs(ded5(r))}<span class="sub">${dedSub}</span>` : '—'}</td>
-        <td class="num grp-start">${f12 ? `${rs(isBankCalc(r.bankType) ? r.bankGross : r.f12Salary)} · ${round2(Number(r.f12Days) || 0)}d` : '—'}</td><td class="num">${f12 ? rs(f12Earned(r)) : '—'}</td>
-        <td class="num">${v(r.pf)}</td><td class="num">${v(r.esic)}</td>
-        <td class="num grp-start">${rs(r.balance)}</td>
-        <td class="num">${r.bankType === 'Cash' || r.bankType === STAFF_CASH ? '—' : `<b>${rs(bankSalary(r))}</b>`}</td>
-        <td class="num">${r.bankType === FULL_BANK ? `<b>${rs(bankIncentive(r))}</b>` : '—'}</td>
-        <td class="num ${red ? 'neg' : ''}"><b>${rs(r.total)}</b>${red ? `<span class="sub neg">${rs(r.carry)} carried fwd</span>` : ''}</td>
-        <td class="num">${v(r.cashOT)}</td>
-        <td><button class="status-btn ${r.status === 'Paid' ? 'paid' : 'pending'}" data-code="${esc(r.code)}"
-             title="${r.paidOn ? 'Paid on ' + esc(r.paidOn) + ' — click to undo' : 'Click to mark as paid'}">${r.status === 'Paid' ? '✔ Paid' : 'Pending · tap to pay'}</button></td></tr>`;
+        ${PAY_COLS.map((c, i) => `<td class="num${payEdge(i)}${c.b ? ' strong' : ''}">${payNum(c.f(r), c.d)}</td>`).join('')}
+        <td class="st-col"><button class="status-btn ${r.status === 'Paid' ? 'paid' : 'pending'}" data-code="${esc(r.code)}"
+             title="${r.paidOn ? 'Paid on ' + esc(r.paidOn) + ' — click to undo' : 'Click to mark as paid'}">${r.status === 'Paid' ? '✔ Paid' : 'Pending'}</button></td></tr>`;
     }).join('')}</tbody>
-    <tfoot><tr><td colspan="3" class="fz fz1">Total</td><td class="num grp-start"></td><td class="num">${round2(tot('payable'))}</td>
-      <td class="num">${rs(tot('earning'))}</td><td class="num">${round2(tot('otHours'))}</td><td class="num">${rs(tot('otPay'))}</td>
-      <td class="num">${rs(tot('fooding'))}</td><td class="num">${rs(tot('incentive'))}</td><td class="num">${rs(tot('gross'))}</td>
-      <td class="num grp-start">${rs(tot(adv))}</td><td class="num">${rs(tot(ded5))}</td>
-      <td class="num grp-start"></td><td class="num">${rs(tot(f12Earned))}</td><td class="num">${rs(tot('pf'))}</td><td class="num">${rs(tot('esic'))}</td>
-      <td class="num grp-start">${rs(tot('balance'))}</td><td class="num">${rs(tot(bankSalary))}</td><td class="num">${rs(tot(bankIncentive))}</td>
-      <td class="num">${rs(tot('total'))}</td><td class="num">${rs(tot('cashOT'))}</td><td></td></tr></tfoot>`;
+    <tfoot><tr><td colspan="3" class="fz fz-tot">Total · ${rows.length} employee${rows.length === 1 ? '' : 's'}</td>
+      ${PAY_COLS.map((c, i) => `<td class="num${payEdge(i)}">${payNum(tot(c.f), c.d)}</td>`).join('')}
+      <td class="st-col"></td></tr></tfoot>`;
 }
 
 async function onMarkShown(status) {
